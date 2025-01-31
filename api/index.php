@@ -20,11 +20,7 @@ header('Content-Type: application/json');
 $router->set404('/api(/.*)?', function () {
     header('HTTP/1.1 404 Not Found');
 
-    $jsonArray = array();
-    $jsonArray['status'] = "404";
-    $jsonArray['status_text'] = "route not defined";
-
-    echo json_encode($jsonArray);
+    echo json_encode(['status' => ['code' => 404, 'message' => 'ok'], "data" => 'nothing here']);
 });
 
 // Define routes
@@ -32,8 +28,61 @@ $router->get('/', function () {
     echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'nothing here']);
 });
 
+$router->post('/register', function () {
+    $j = json_decode(file_get_contents("php://input"), true);
+    if (is_null($j) || $j === false) {
+        header('HTTP/1.1 400 Bad Request');
+        echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+        die();
+    } elseif (!empty($j["email"]) && !empty($j["password"]) && !empty($j["username"])) {
+        try {
+            $api = new API();
+            $result = $api->register($j["email"], $j["password"], $j["username"]);
+        } catch (\Throwable $th) {
+            handleErr($th);
+        }
+
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $result]);
+        die();
+    }
+    header('HTTP/1.1 400 Bad Request');
+    echo json_encode(['status' => ["code" => 400, 'message' => 'Bad request']]);
+    die();
+});
+
+$router->post('/log-in', function () {
+    $j = json_decode(file_get_contents("php://input"), true);
+    if (is_null($j) || $j === false) {
+        header('HTTP/1.1 400 Bad Request');
+        echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+        die();
+    } elseif (!empty($j["email"]) && !empty($j["password"])) {
+        try {
+            $api = new API();
+            $result = $api->log_in($j["email"], $j["password"]);
+            if ($result === true) {
+                echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => "Logged in"]);
+                die();
+            }
+        } catch (\Throwable $th) {
+            handleErr($th);
+        }
+    }
+    header('HTTP/1.1 400 Bad Request');
+    echo json_encode(['status' => ["code" => 400, 'message' => 'Bad request']]);
+    die();
+});
+
+$router->post('/log-out', function () {
+    $api = new API();
+    $api->logOut();
+    echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => "Logged out"]);
+    die();
+});
+
 $router->get('/feed', function () {
     try {
+        log_in_check(true);
         $start = date('Y-m-d', strtotime(checkGetParam('start', NULL)));
         $end = date('Y-m-d', strtotime(checkGetParam('end', NULL)));
 
@@ -45,7 +94,7 @@ $router->get('/feed', function () {
             throw new \Exception("Error Processing Request", 1);
         }
     } catch (\Throwable $th) {
-        debug($th);
+        handleErr($th);
     }
 });
 
@@ -55,7 +104,7 @@ $router->get('/year/(\d+)', function ($year) {
         $days = $api->get_wfo_days($year);
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $days]);
     } catch (\Throwable $th) {
-        debug($th);
+        handleErr($th);
     }
 });
 
@@ -65,7 +114,7 @@ $router->get('/year/(\d+)/month/(\d+)', function ($year, $month) {
         $days = $api->get_wfo_days($year, $month);
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $days]);
     } catch (\Throwable $th) {
-        debug($th);
+        handleErr($th);
     }
 });
 
@@ -80,7 +129,7 @@ $router->post('/year/(\d+)/month/(\d+)/day/(\d+)', function ($year, $month, $day
             throw new \Exception("Unable to add new value! Data... year: " . strval($year) . " month: " . strval($month) . " day: " . strval($day), 1);
         }
     } catch (\Throwable $th) {
-        debug($th);
+        handleErr($th);
     }
 });
 
@@ -98,10 +147,10 @@ $router->post('/switch', function () {
         if ($result) {
             echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
         } else {
-            throw new \Exception("Unable to add new value! Data... year: " . strval($year) . " month: " . strval($month) . " day: " . strval($day), 1);
+            throw new \Exception("Unable to add switch data!", 1);
         }
     } catch (\Throwable $th) {
-        debug($th);
+        handleErr($th);
     }
 });
 
@@ -112,8 +161,9 @@ function checkGetParam($param, $default) {
     return $default;
 }
 
-function debug($message) {
-    if ($_ENV['debug'] == "true") {
+function handleErr($message) {
+    header('HTTP/1.1 500 Internal Server Error');
+    if ($_ENV['debug'] === "true") {
         var_dump($message);
         die();
     } else {
@@ -121,6 +171,20 @@ function debug($message) {
         echo json_encode(['status' => ['code' => 500, 'message' => 'Ops! Error! Contact Administrator.']]);
         die();
     }
+}
+
+function log_in_check($just_check = false) {
+    $api = new API();
+    if ($api->isLoggedIn()) {
+        if (!$just_check) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => "ok"]);
+            die();
+        }
+        return;
+    }
+    header('HTTP/1.1 401 Unauthorized');
+    echo json_encode(['status' => ["code" => 401, 'message' => 'Unauthorized']]);
+    die();
 }
 
 $router->run();
