@@ -11,3 +11,38 @@
     Order Allow,Deny
     Deny from all
 </Files>
+
+<Files ".env">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+<Files ".env.example">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+<Files "composer.phar">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+<Files "composer.lock">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+<Files "composer.json">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+<Files "migrations-db.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+<Files "migrations.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
