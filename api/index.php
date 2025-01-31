@@ -39,7 +39,11 @@ $router->get('/feed', function () {
 
         $api = new API();
         $days = $api->get_wfo_days_feed($start, $end);
-        echo json_encode($days);
+        if (is_array($days)) {
+            echo json_encode($days);
+        } else {
+            throw new Exception("Error Processing Request", 1);
+        }
     } catch (\Throwable $th) {
         debug($th);
     }
