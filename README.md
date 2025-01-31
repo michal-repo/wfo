@@ -23,5 +23,5 @@ composer install
 
 ## Linux:
 ```
-.\vendor\bin\doctrine-migrations migrate
+./vendor/bin/doctrine-migrations migrate
 ```

@@ -42,7 +42,7 @@ $router->get('/feed', function () {
         if (is_array($days)) {
             echo json_encode($days);
         } else {
-            throw new Exception("Error Processing Request", 1);
+            throw new \Exception("Error Processing Request", 1);
         }
     } catch (\Throwable $th) {
         debug($th);

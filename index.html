@@ -17,6 +17,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             const calendarEl = document.getElementById('calendar')
             calendar = new FullCalendar.Calendar(calendarEl, {
+                timeZone: 'UTC',
                 themeSystem: 'bootstrap5',
                 initialView: 'dayGridMonth',
                 weekNumberCalculation: "ISO",
