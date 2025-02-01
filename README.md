@@ -1,8 +1,8 @@
 # Work From Office/Home Calendar
 
 
-![WFO-1](./Screenshot WFO Calendar.png?raw=true)
-![WFO-2](./Screenshot WFO Calendar 2.png?raw=true)
+![WFO-1](Screenshot%20WFO%20Calendar.png?raw=true)
+![WFO-2](Screenshot%20WFO%20Calendar%202.png?raw=true)
 
 ## env
 ```
