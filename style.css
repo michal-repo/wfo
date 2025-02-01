@@ -1,5 +1,19 @@
 .stats {
-    height: 10vh;
+    height: 7vh;
+}
+
+.wfo-calendar {
+    height: 93vh;
+}
+
+@media only screen and (max-width: 800px) {
+    .stats {
+        display: none;
+    }
+
+    .wfo-calendar {
+        height: 100vh;
+    }
 }
 
 .fc-event {

@@ -249,6 +249,20 @@ $router->post('/holiday/add', function () {
     }
 });
 
+$router->post('/working-days/year/(\d+)/month/(\d+)/working-days/(\d+)', function ($year, $month, $working_days) {
+    try {
+        $api = new API();
+        $result = $api->add_wfo_working_days($year, $month, $working_days);
+        if ($result) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
+        } else {
+            throw new \Exception("Unable to add new value! Data... year: " . strval($year) . " month: " . strval($month) . " working_days: " . strval($working_days), 1);
+        }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
 function checkGetParam($param, $default) {
     if (isset($_GET[$param])) {
         return $_GET[$param];

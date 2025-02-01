@@ -305,6 +305,21 @@ class API {
         return $target_found;
     }
 
+
+    public function add_wfo_working_days($year, $month, $working_days) {
+        $query = "REPLACE INTO wfo_working_days (`year`, `month`, working_days, user_id) VALUES (:year, :month, :working_days, :user_id)";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        $stmt->bindValue(':month', $month, \PDO::PARAM_INT);
+        $stmt->bindValue(':working_days', $working_days, \PDO::PARAM_INT);
+
+        $result = $stmt->execute();
+
+        return $result;
+    }
+
     public function get_wfo_holidays($year, $month = NULL) {
         $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") FROM wfo_holidays WHERE user_id = :user_id AND YEAR(defined_date) = :year ';
         if (!is_null($month)) {
