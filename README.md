@@ -1,5 +1,9 @@
 # Work From Office/Home Calendar
 
+
+![WFO-1](./Screenshot WFO Calendar.png?raw=true)
+![WFO-2](./Screenshot WFO Calendar 2.png?raw=true)
+
 ## env
 ```
 cd api
