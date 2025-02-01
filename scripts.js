@@ -50,6 +50,7 @@ function update_stats(year, month) {
     const year_target_progressbar = document.getElementById('year-target-progressbar');
     const working_days = document.getElementById('working-days');
     const holidays = document.getElementById('holidays');
+    const office_min = document.getElementById('office-min');
 
     const month_target_edit = document.getElementById('month-target-edit');
     const year_target_edit = document.getElementById('year-target-edit');
@@ -70,6 +71,7 @@ function update_stats(year, month) {
             && response.data.data.month_target !== null) {
 
             calc = (response.data.data.office_days / (((response.data.data.working_days - response.data.data.holidays) * response.data.data.month_target) / 100)) * 100;
+            office_min.innerText = (((response.data.data.working_days - response.data.data.holidays) * response.data.data.month_target) / 100);
         }
 
         if (response.data.data.working_days_year !== null
