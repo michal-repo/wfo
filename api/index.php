@@ -28,6 +28,22 @@ $router->get('/', function () {
     echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'nothing here']);
 });
 
+
+$router->get('/check', function () {
+    log_in_check(true);
+});
+
+$router->get('/register', function () {
+    $api = new API();
+    if ($api->isRegisterEnabled()) {
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => "Available"]);
+        die();
+    }
+    header('HTTP/1.1 503 Service Unavailable');
+    echo json_encode(['status' => ['code' => 503, 'message' => 'Unavailable'], "data" => "Unavailable"]);
+    die();
+});
+
 $router->post('/register', function () {
     $j = json_decode(file_get_contents("php://input"), true);
     if (is_null($j) || $j === false) {
@@ -118,7 +134,6 @@ $router->get('/year/(\d+)/month/(\d+)', function ($year, $month) {
     }
 });
 
-
 $router->post('/year/(\d+)/month/(\d+)/day/(\d+)', function ($year, $month, $day) {
     try {
         $api = new API();
@@ -148,6 +163,86 @@ $router->post('/switch', function () {
             echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
         } else {
             throw new \Exception("Unable to add switch data!", 1);
+        }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
+    try {
+        $api = new API();
+        $result = [];
+        $year_target = $api->get_wfo_year_target($year);
+        $result['year_target'] = $year_target ? $year_target : null;
+        $month_target = $api->get_wfo_month_target($year, $month);
+        $result['month_target'] = $month_target ? $month_target : $result['year_target'];
+        $office_days = $api->get_wfo_days_count($year, $month);
+        $result['office_days'] = $office_days;
+        $office_days_year = $api->get_wfo_days_count($year);
+        $result['office_days_year'] = $office_days_year;
+        $working_days = $api->get_wfo_working_days($year, $month);
+        $result['working_days'] = $working_days ? $working_days : 0;
+        $working_days_year = $api->get_wfo_working_days($year);
+        $result['working_days_year'] = $working_days_year ? intval($working_days_year) : 0;
+        $holidays = $api->get_wfo_holidays_count($year, $month);
+        $result['holidays'] = $holidays ? $holidays : 0;
+        $holidays_year = $api->get_wfo_holidays_count($year);
+        $result['holidays_year'] = $holidays_year ? $holidays_year : 0;
+        if ($result) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $result]);
+        } else {
+            header('HTTP/1.1 404 Not Found');
+            echo json_encode(['status' => ['code' => 404, 'message' => 'ok'], "data" => 'no data']);
+        }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/target/year/(\d+)/month/(\d+)/target/(\d+)', function ($year, $month, $target) {
+    try {
+        $api = new API();
+        $result = $api->add_wfo_month_target($year, $month, $target);
+        if ($result) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
+        } else {
+            throw new \Exception("Unable to add new value! Data... year: " . strval($year) . " month: " . strval($month) . " target: " . strval($target), 1);
+        }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/target/year/(\d+)/target/(\d+)', function ($year, $target) {
+    try {
+        $api = new API();
+        $result = $api->add_wfo_year_target($year, $target);
+        if ($result) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
+        } else {
+            throw new \Exception("Unable to add new value! Data... year: " . strval($year) . " target: " . strval($target), 1);
+        }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/holiday/add', function () {
+    $j = json_decode(file_get_contents("php://input"), true);
+    if (is_null($j) || $j === false) {
+        header('HTTP/1.1 400 Bad Request');
+        echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+        die();
+    }
+    try {
+        $day = date('Y-m-d', strtotime($j['day']));
+        $api = new API();
+        $result = $api->add_wfo_holiday($day);
+        if ($result) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
+        } else {
+            throw new \Exception("Unable to add Holiday!", 1);
         }
     } catch (\Throwable $th) {
         handleErr($th);

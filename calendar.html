@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WFO Calendar</title>
+    <link rel="icon" href="favicon.png" type="image/png">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link href='https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css' rel='stylesheet'>
+    <link href='https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css' rel='stylesheet'>
+    <script src="scripts.js"></script>
+    <link href='style.css' rel='stylesheet'>
+    <script defer>
+        let calendar;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const calendarEl = document.getElementById('calendar');
+            login_check().then(r => {
+                let headerToolbarCustomButtons = "";
+                if (r) {
+                    headerToolbarCustomButtons += " LogOut";
+                } else {
+                    headerToolbarCustomButtons += " LogIn";
+                }
+                calendar = new FullCalendar.Calendar(calendarEl, {
+                    timeZone: 'UTC',
+                    themeSystem: 'bootstrap5',
+                    initialView: 'dayGridMonth',
+                    weekNumberCalculation: "ISO",
+                    height: "90vh",
+                    eventClick: function (info) {
+                        switch_day(info.event.start.toISOString(), info.event.title)
+                    },
+                    eventOrder: "id,start,-duration,allDay,title",
+                    customButtons: {
+                        LogOut: {
+                            text: 'Log out',
+                            click: function () {
+                                log_out();
+                            },
+                            hint: "Log out"
+                        },
+                        LogIn: {
+                            text: 'Log in/Register',
+                            click: function () {
+                                window.location.replace("/wfo");
+                            },
+                            hint: "Log in or Register"
+                        }
+                    },
+                    headerToolbar: {
+                        left: 'dayGridMonth,timeGridWeek' + headerToolbarCustomButtons,
+                        center: 'title',
+                        right: 'prev,next today'
+                    },
+                    events: '/wfo/api/feed'
+                })
+                calendar.render();
+
+                let target = document.getElementById('calendar');
+                let observer = new MutationObserver(function (mutations) {
+                    update_stats(calendar.getDate().getFullYear(), calendar.getDate().getMonth() + 1);
+                });
+                let config = { attributes: true, childList: true, characterData: true, subtree: true };
+                observer.observe(target, config);
+
+
+            });
+
+        })
+
+        function switch_day(day, event_text) {
+            if (event_text.includes("Add holiday")) {
+                axios.post(`/wfo/api/holiday/add`, {
+                    day: day
+                }).then(response => {
+                    calendar.refetchEvents();
+                }).catch(error => {
+                    console.error('There was an error switching the day:', error);
+                });
+            } else {
+                axios.post(`/wfo/api/switch`, {
+                    day: day
+                }).then(response => {
+                    calendar.refetchEvents();
+                }).catch(error => {
+                    console.error('There was an error switching the day:', error);
+                });
+            }
+        }
+
+        function log_out() {
+            axios.post(`/wfo/api/log-out`).then(response => {
+                window.location.replace("/wfo");
+            }).catch(error => {
+                console.error('There was an error: ', error);
+            });
+        }
+
+    </script>
+</head>
+
+<body>
+    <div id="stats" class="stats container-fluid">
+        <div class="row">
+            <div class="col-8">
+                <div class="row">
+                    <div class="col">
+                        <h3>Month Target <span id="month-target"></span>%</h3>
+                    </div>
+                    <div class="col">
+                        <h3>Working Days <span id="working-days"></span></h3>
+                    </div>
+                    <div class="col">
+                        <h3>Holidays <span id="holidays"></span></h3>
+                    </div>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" id="month-target-progressbar" role="progressbar"></div>
+                </div>
+            </div>
+            <div class="col-4">
+                <h3>Year Target <span id="year-target"></span>%</h3>
+                <div class="progress">
+                    <div class="progress-bar" id="year-target-progressbar" role="progressbar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id='calendar'></div>
+</body>
+
+</html>

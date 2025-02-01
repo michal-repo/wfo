@@ -19,7 +19,7 @@ class API {
 
     public function log_in($email, $password) {
         try {
-            $this->auth->login($email, $password);
+            $this->auth->login($email, $password, ((empty($_ENV["login_remember_duration"]) || intval($_ENV["login_remember_duration"]) === 0)  ? NULL : $_ENV["login_remember_duration"]));
 
             return true;
         } catch (\Delight\Auth\InvalidEmailException $e) {
@@ -36,6 +36,10 @@ class API {
 
     public function isLoggedIn() {
         return $this->auth->isLoggedIn();
+    }
+
+    public function isRegisterEnabled() {
+        return $_ENV["register_enabled"] === "true" ? true : false;
     }
 
     public function logOut() {
@@ -87,18 +91,43 @@ class API {
         return $days_found;
     }
 
+    public function get_wfo_days_count($year, $month = NULL) {
+        $query = 'SELECT count(*) FROM wfo_days WHERE user_id = :user_id AND YEAR(defined_date) = :year ';
+        if (!is_null($month)) {
+            $query .= " and MONTH(defined_date) = :month";
+        }
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        if (!is_null($month)) {
+            $stmt->bindValue(':month', $month, \PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+
+        $target_found = $stmt->fetchColumn();
+        return $target_found;
+    }
+
     public function get_wfo_days_feed($start, $end) {
         $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") FROM wfo_days WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
-
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->bindValue(':start', $start, \PDO::PARAM_STR);
         $stmt->bindValue(':end', $end, \PDO::PARAM_STR);
-
-
         $stmt->execute();
-
         $days_found = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+        $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") FROM wfo_holidays WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':start', $start, \PDO::PARAM_STR);
+        $stmt->bindValue(':end', $end, \PDO::PARAM_STR);
+        $stmt->execute();
+        $holidays_found = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+
         $res = [];
         $begin = new \DateTime($start);
         $finish = new \DateTime($end);
@@ -106,25 +135,51 @@ class API {
         $period = new \DatePeriod($begin, $interval, $finish);
 
         foreach ($period as $dt) {
-            if (in_array($dt->format("Y-m-d"), $days_found)) {
+            if (in_array($dt->format("Y-m-d"), $holidays_found)) {
+                $res[] = [
+                    "title" => $_ENV['holiday_label'],
+                    "start" => $dt->format("Y-m-d"),
+                    "end" => $dt->format("Y-m-d"),
+                    "color" => $_ENV['holiday_color'],
+                    "cursor" => "pointer"
+                ];
+            } elseif (in_array($dt->format("Y-m-d"), $days_found)) {
                 $res[] = [
                     "title" => $_ENV['office_day_label'],
                     "start" => $dt->format("Y-m-d"),
                     "end" => $dt->format("Y-m-d"),
                     "color" => $_ENV['office_day_color'],
-                    "cursor" => "pointer"
+                    "cursor" => "pointer",
+                    "id" => 1
                 ];
+                $res[] = $this->add_holiday_event($dt);
             } else {
-                $res[] = [
-                    "title" => $_ENV['home_day_label'],
-                    "start" => $dt->format("Y-m-d"),
-                    "end" => $dt->format("Y-m-d"),
-                    "color" => $_ENV['home_day_color'],
-                    "cursor" => "pointer"
-                ];
+                if (in_array($dt->format("N"), [1, 2, 3, 4, 5])) {
+                    $res[] = [
+                        "title" => $_ENV['home_day_label'],
+                        "start" => $dt->format("Y-m-d"),
+                        "end" => $dt->format("Y-m-d"),
+                        "color" => $_ENV['home_day_color'],
+                        "cursor" => "pointer",
+                        "id" => 1
+                    ];
+                    $res[] = $this->add_holiday_event($dt);
+                }
             }
         }
         return $res;
+    }
+
+    private function add_holiday_event($dt) {
+        return [
+            "title" => "🏖️ Add holiday",
+            "start" => $dt->format("Y-m-d"),
+            "end" => $dt->format("Y-m-d"),
+            "color" => $_ENV['add_holiday_color'],
+            "textColor" => $_ENV['add_holiday_text_color'],
+            "cursor" => "pointer",
+            "id" => 9
+        ];
     }
 
     public function add_wfo_day($year, $month, $day) {
@@ -140,6 +195,16 @@ class API {
         return $result;
     }
 
+    public function delete_wfo_day($day) {
+        $query = "DELETE from wfo_days WHERE user_id = :user_id AND defined_date = :day";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
+
+        return $stmt->execute();
+    }
+
     public function switch_wfo_day($day) {
         $query = 'SELECT count(*) as count FROM wfo_days WHERE user_id = :user_id AND defined_date = :day';
         $stmt = $this->db->dbh->prepare($query);
@@ -149,14 +214,10 @@ class API {
         $days_found = $stmt->fetchAll(\PDO::FETCH_COLUMN)[0];
 
         if ($days_found > 0) {
-            $query = "DELETE from wfo_days WHERE user_id = :user_id AND defined_date = :day";
-
-            $stmt = $this->db->dbh->prepare($query);
-            $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
-            $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
-
-            $result = $stmt->execute();
+            $result = $this->delete_wfo_day($day);
         } else {
+            $result = $this->delete_wfo_holidays($day);
+
             $query = "REPLACE INTO wfo_days (defined_date, user_id) VALUES (:day, :user_id)";
 
             $stmt = $this->db->dbh->prepare($query);
@@ -167,5 +228,140 @@ class API {
         }
 
         return $result;
+    }
+
+    public function get_wfo_month_target($year, $month) {
+        $query = "select target from wfo_month_target WHERE month_of_target = :month_of_target AND year_of_target = :year_of_target AND user_id = :user_id limit 1";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':month_of_target', $month, \PDO::PARAM_INT);
+        $stmt->bindValue(':year_of_target', $year, \PDO::PARAM_INT);
+
+        $stmt->execute();
+        $target_found = $stmt->fetchColumn();
+        return $target_found;
+    }
+
+    public function add_wfo_month_target($year, $month, $target) {
+        $query = "REPLACE INTO wfo_month_target (month_of_target, year_of_target, `target`, user_id) VALUES (:month_of_target, :year_of_target, :target, :user_id)";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':month_of_target', $month, \PDO::PARAM_INT);
+        $stmt->bindValue(':year_of_target', $year, \PDO::PARAM_INT);
+        $stmt->bindValue(':target', $target, \PDO::PARAM_INT);
+
+        $result = $stmt->execute();
+
+        return $result;
+    }
+
+    public function get_wfo_year_target($year) {
+        $query = "select target from wfo_year_target WHERE year_of_target = :year_of_target AND user_id = :user_id limit 1";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year_of_target', $year, \PDO::PARAM_INT);
+
+        $stmt->execute();
+        $target_found = $stmt->fetchColumn();
+        return $target_found;
+    }
+
+    public function add_wfo_year_target($year, $target) {
+        $query = "REPLACE INTO wfo_year_target (year_of_target, `target`, user_id) VALUES (:year_of_target, :target, :user_id)";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year_of_target', $year, \PDO::PARAM_INT);
+        $stmt->bindValue(':target', $target, \PDO::PARAM_INT);
+
+        $result = $stmt->execute();
+
+        return $result;
+    }
+
+    public function get_wfo_working_days($year, $month = NULL) {
+        $query = "select working_days ";
+        if (is_null($month)) {
+            $query = "select SUM(working_days) ";
+        }
+        $query .= " from wfo_working_days WHERE `year` = :year AND user_id = :user_id ";
+        if (!is_null($month)) {
+            $query .= " and `month` = :month ";
+        }
+        $query .= " limit 1";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        if (!is_null($month)) {
+            $stmt->bindValue(':month', $month, \PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+        $target_found = $stmt->fetchColumn();
+        return $target_found;
+    }
+
+    public function get_wfo_holidays($year, $month = NULL) {
+        $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") FROM wfo_holidays WHERE user_id = :user_id AND YEAR(defined_date) = :year ';
+        if (!is_null($month)) {
+            $query .= " and MONTH(defined_date) = :month";
+        }
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        if (!is_null($month)) {
+            $stmt->bindValue(':month', $month, \PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+
+        $days_found = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        return $days_found;
+    }
+
+    public function get_wfo_holidays_count($year, $month = NULL) {
+        $query = 'SELECT count(*) FROM wfo_holidays WHERE user_id = :user_id AND YEAR(defined_date) = :year ';
+        if (!is_null($month)) {
+            $query .= " and MONTH(defined_date) = :month";
+        }
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        if (!is_null($month)) {
+            $stmt->bindValue(':month', $month, \PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+
+        $target_found = $stmt->fetchColumn();
+        return $target_found;
+    }
+
+    public function add_wfo_holiday($day) {
+        $this->delete_wfo_day($day);
+
+        $query = "REPLACE INTO wfo_holidays (defined_date, user_id) VALUES (:day, :user_id)";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
+
+        $result = $stmt->execute();
+
+        return $result;
+    }
+
+    public function delete_wfo_holidays($day) {
+        $query = "DELETE from wfo_holidays WHERE user_id = :user_id AND defined_date = :day";
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
+        return $stmt->execute();
     }
 }

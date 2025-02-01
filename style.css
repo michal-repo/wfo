@@ -1,3 +1,19 @@
+.stats {
+    height: 10vh;
+}
+
 .fc-event {
     cursor: pointer;
+}
+
+.fc-LogIn-button {
+    color: #fff !important;
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+}
+
+.fc-LogOut-button {
+    color: #fff !important;
+    background-color: #899097 !important;
+    border-color: #899097 !important;
 }
