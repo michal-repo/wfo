@@ -249,6 +249,27 @@ $router->post('/holiday/add', function () {
     }
 });
 
+$router->post('/bank-holiday/add', function () {
+    $j = json_decode(file_get_contents("php://input"), true);
+    if (is_null($j) || $j === false) {
+        header('HTTP/1.1 400 Bad Request');
+        echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+        die();
+    }
+    try {
+        $day = date('Y-m-d', strtotime($j['day']));
+        $api = new API();
+        $result = $api->add_wfo_bank_holidays($day);
+        if ($result) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
+        } else {
+            throw new \Exception("Unable to add Bank Holiday!", 1);
+        }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
 $router->post('/working-days/year/(\d+)/month/(\d+)/working-days/(\d+)', function ($year, $month, $working_days) {
     try {
         $api = new API();

@@ -1,6 +1,6 @@
 async function login_check() {
     let response;
-    response = await axios.get(`/wfo/api/check`).then(response => {
+    response = await axios.get(`api/check`).then(response => {
         return true;
     }).catch(error => {
         return false;
@@ -10,7 +10,7 @@ async function login_check() {
 
 async function register_check() {
     let response;
-    response = await axios.get(`/wfo/api/register`).then(response => {
+    response = await axios.get(`api/register`).then(response => {
         return false;
     }).catch(error => {
         return true;
@@ -20,7 +20,7 @@ async function register_check() {
 
 
 function set_month_target(year, month, target) {
-    axios.post(`/wfo/api/target/year/${year}/month/${month}/target/${target}`).then(response => {
+    axios.post(`api/target/year/${year}/month/${month}/target/${target}`).then(response => {
         return true;
     }).catch(error => {
         return false;
@@ -28,7 +28,7 @@ function set_month_target(year, month, target) {
 }
 
 function set_working_days(year, month, target) {
-    axios.post(`/wfo/api/working-days/year/${year}/month/${month}/working-days/${target}`).then(response => {
+    axios.post(`api/working-days/year/${year}/month/${month}/working-days/${target}`).then(response => {
         return true;
     }).catch(error => {
         return false;
@@ -36,7 +36,7 @@ function set_working_days(year, month, target) {
 }
 
 function set_year_target(year, target) {
-    axios.post(`/wfo/api/target/year/${year}/target/${target}`).then(response => {
+    axios.post(`api/target/year/${year}/target/${target}`).then(response => {
         return true;
     }).catch(error => {
         return false;
@@ -58,7 +58,7 @@ function update_stats(year, month) {
 
     let calc = 0;
     let calc_year = 0;
-    axios.get(`/wfo/api/target/year/${year}/month/${month}`).then(response => {
+    axios.get(`api/target/year/${year}/month/${month}`).then(response => {
         month_target.innerText = response.data.data.month_target !== null ? response.data.data.month_target : "100";
         month_target_edit.value = month_target.innerText;
         year_target.innerText = response.data.data.year_target !== null ? response.data.data.year_target : "100";

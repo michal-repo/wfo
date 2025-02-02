@@ -82,7 +82,7 @@
     function login(element) {
         event.preventDefault();
 
-        axios.post(`/wfo/api/log-in`, {
+        axios.post(`api/log-in`, {
             email: document.getElementById("email").value,
             password: document.getElementById("password").value
         }).then(response => {
@@ -98,7 +98,7 @@
     function register(element) {
         event.preventDefault();
 
-        axios.post(`/wfo/api/register`, {
+        axios.post(`api/register`, {
             email: document.getElementById("reg_email").value,
             password: document.getElementById("reg_password").value,
             username: document.getElementById("reg_username").value

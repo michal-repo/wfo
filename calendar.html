@@ -62,7 +62,7 @@
                         center: 'title',
                         right: 'prev,next today'
                     },
-                    events: '/wfo/api/feed'
+                    events: 'api/feed'
                 })
                 calendar.render();
 
@@ -79,8 +79,16 @@
         })
 
         function switch_day(day, event_text) {
-            if (event_text.includes("Add holiday")) {
-                axios.post(`/wfo/api/holiday/add`, {
+            if (event_text.includes("Add Bank holiday")) {
+                axios.post(`api/bank-holiday/add`, {
+                    day: day
+                }).then(response => {
+                    calendar.refetchEvents();
+                }).catch(error => {
+                    console.error('There was an error switching the day:', error);
+                });
+            } else if (event_text.includes("Add holiday")) {
+                axios.post(`api/holiday/add`, {
                     day: day
                 }).then(response => {
                     calendar.refetchEvents();
@@ -88,7 +96,7 @@
                     console.error('There was an error switching the day:', error);
                 });
             } else {
-                axios.post(`/wfo/api/switch`, {
+                axios.post(`api/switch`, {
                     day: day
                 }).then(response => {
                     calendar.refetchEvents();
@@ -99,7 +107,7 @@
         }
 
         function log_out() {
-            axios.post(`/wfo/api/log-out`).then(response => {
+            axios.post(`api/log-out`).then(response => {
                 window.location.replace("/wfo");
             }).catch(error => {
                 console.error('There was an error: ', error);

@@ -127,6 +127,14 @@ class API {
         $stmt->execute();
         $holidays_found = $stmt->fetchAll(\PDO::FETCH_COLUMN);
 
+        $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") FROM wfo_bank_holidays WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':start', $start, \PDO::PARAM_STR);
+        $stmt->bindValue(':end', $end, \PDO::PARAM_STR);
+        $stmt->execute();
+        $bank_holidays_found = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
 
         $res = [];
         $begin = new \DateTime($start);
@@ -135,7 +143,15 @@ class API {
         $period = new \DatePeriod($begin, $interval, $finish);
 
         foreach ($period as $dt) {
-            if (in_array($dt->format("Y-m-d"), $holidays_found)) {
+            if (in_array($dt->format("Y-m-d"), $bank_holidays_found)) {
+                $res[] = [
+                    "title" => "🛋️ Bank holiday",
+                    "start" => $dt->format("Y-m-d"),
+                    "end" => $dt->format("Y-m-d"),
+                    "color" => "#84003e",
+                    "cursor" => "pointer"
+                ];
+            } elseif (in_array($dt->format("Y-m-d"), $holidays_found)) {
                 $res[] = [
                     "title" => $_ENV['holiday_label'],
                     "start" => $dt->format("Y-m-d"),
@@ -152,7 +168,8 @@ class API {
                     "cursor" => "pointer",
                     "id" => 1
                 ];
-                $res[] = $this->add_holiday_event($dt);
+                $res[] = $this->generate_holiday_event($dt);
+                $res[] = $this->generate_bank_holiday_event($dt);
             } else {
                 if (in_array($dt->format("N"), [1, 2, 3, 4, 5])) {
                     $res[] = [
@@ -163,16 +180,29 @@ class API {
                         "cursor" => "pointer",
                         "id" => 1
                     ];
-                    $res[] = $this->add_holiday_event($dt);
+                    $res[] = $this->generate_holiday_event($dt);
+                    $res[] = $this->generate_bank_holiday_event($dt);
                 }
             }
         }
         return $res;
     }
 
-    private function add_holiday_event($dt) {
+    private function generate_holiday_event($dt) {
         return [
             "title" => "🏖️ Add holiday",
+            "start" => $dt->format("Y-m-d"),
+            "end" => $dt->format("Y-m-d"),
+            "color" => $_ENV['add_holiday_color'],
+            "textColor" => $_ENV['add_holiday_text_color'],
+            "cursor" => "pointer",
+            "id" => 9
+        ];
+    }
+
+    private function generate_bank_holiday_event($dt) {
+        return [
+            "title" => "🏢 Add Bank holiday",
             "start" => $dt->format("Y-m-d"),
             "end" => $dt->format("Y-m-d"),
             "color" => $_ENV['add_holiday_color'],
@@ -217,6 +247,7 @@ class API {
             $result = $this->delete_wfo_day($day);
         } else {
             $result = $this->delete_wfo_holidays($day);
+            $result = $this->delete_wfo_bank_holidays($day);
 
             $query = "REPLACE INTO wfo_days (defined_date, user_id) VALUES (:day, :user_id)";
 
@@ -374,6 +405,48 @@ class API {
 
     public function delete_wfo_holidays($day) {
         $query = "DELETE from wfo_holidays WHERE user_id = :user_id AND defined_date = :day";
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
+        return $stmt->execute();
+    }
+
+
+    public function get_wfo_bank_holidays($year, $month = NULL) {
+        $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") FROM wfo_bank_holidays WHERE user_id = :user_id AND YEAR(defined_date) = :year ';
+        if (!is_null($month)) {
+            $query .= " and MONTH(defined_date) = :month";
+        }
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        if (!is_null($month)) {
+            $stmt->bindValue(':month', $month, \PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+
+        $days_found = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        return $days_found;
+    }
+
+    public function add_wfo_bank_holidays($day) {
+        $this->delete_wfo_day($day);
+
+        $query = "REPLACE INTO wfo_bank_holidays (defined_date, user_id) VALUES (:day, :user_id)";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
+
+        $result = $stmt->execute();
+
+        return $result;
+    }
+
+    public function delete_wfo_bank_holidays($day) {
+        $query = "DELETE from wfo_bank_holidays WHERE user_id = :user_id AND defined_date = :day";
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
