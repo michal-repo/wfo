@@ -50,7 +50,7 @@ function update_stats(year, month) {
     const year_target_progressbar = document.getElementById('year-target-progressbar');
     const working_days = document.getElementById('working-days');
     const holidays = document.getElementById('holidays');
-    const office_min = document.getElementById('office-min');
+    const office_min = document.getElementById('office-actual-min');
 
     const month_target_edit = document.getElementById('month-target-edit');
     const year_target_edit = document.getElementById('year-target-edit');
@@ -71,7 +71,7 @@ function update_stats(year, month) {
             && response.data.data.month_target !== null) {
 
             calc = (response.data.data.office_days / (((response.data.data.working_days - response.data.data.holidays) * response.data.data.month_target) / 100)) * 100;
-            office_min.innerText = (((response.data.data.working_days - response.data.data.holidays) * response.data.data.month_target) / 100);
+            office_min.innerText = response.data.data.office_days + "/" + (((response.data.data.working_days - response.data.data.holidays) * response.data.data.month_target) / 100);
         }
 
         if (response.data.data.working_days_year !== null
@@ -86,12 +86,22 @@ function update_stats(year, month) {
         } else {
             month_target_progressbar.classList.remove("bg-success");
         }
+        if (calc >= 0 && calc <= 50) {
+            month_target_progressbar.classList.add("bg-warning");
+        } else {
+            month_target_progressbar.classList.remove("bg-warning");
+        }
         month_target_progressbar.style.width = `${calc}%`;
 
         if (calc_year >= 100) {
             year_target_progressbar.classList.add("bg-success");
         } else {
             year_target_progressbar.classList.remove("bg-success");
+        }
+        if (calc_year >= 0 && calc_year <= 50) {
+            year_target_progressbar.classList.add("bg-warning");
+        } else {
+            year_target_progressbar.classList.remove("bg-warning");
         }
         year_target_progressbar.style.width = `${calc_year}%`;
 
