@@ -95,6 +95,14 @@
                 }).catch(error => {
                     console.error('There was an error switching the day:', error);
                 });
+            } else if (event_text.includes("Add Sick Leave")) {
+                axios.post(`api/sickleave/add`, {
+                    day: day
+                }).then(response => {
+                    calendar.refetchEvents();
+                }).catch(error => {
+                    console.error('There was an error switching the day:', error);
+                });
             } else {
                 axios.post(`api/switch`, {
                     day: day
@@ -124,7 +132,7 @@
 <body>
     <div id="stats" class="stats container-fluid">
         <div class="row">
-            <div class="col-9">
+            <div class="col-10">
                 <div class="row">
                     <div class="col">
                         <h5>Month Target - <b><span id="month-target"></span>%</b>
@@ -146,14 +154,18 @@
                         <h5>Office days (actual/min.) - <b id="office-actual-min"></b></h5>
                     </div>
                     <div class="col">
-                        <h5>Holidays - <b id="holidays"></b></h5>
+                        <h5>
+                            <span>Holidays - <b id="holidays"></b></span>
+
+                            <span class="ms-5">Sick leave - <b id="sickleave"></b></span>
+                        </h5>
                     </div>
                 </div>
                 <div class="progress">
                     <div class="progress-bar" id="month-target-progressbar" role="progressbar"></div>
                 </div>
             </div>
-            <div class="col-3">
+            <div class="col-2">
                 <h5>Year Target - <b><span id="year-target"></span>%</b>
                     <button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
                         data-bs-target="#yearTargetModal">
