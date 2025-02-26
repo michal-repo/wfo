@@ -50,6 +50,7 @@ function update_stats(year, month) {
     const year_target_progressbar = document.getElementById('year-target-progressbar');
     const working_days = document.getElementById('working-days');
     const holidays = document.getElementById('holidays');
+    const sickleave = document.getElementById('sickleave');
     const office_min = document.getElementById('office-actual-min');
 
     const month_target_edit = document.getElementById('month-target-edit');
@@ -66,19 +67,20 @@ function update_stats(year, month) {
         working_days.innerText = response.data.data.working_days !== null ? response.data.data.working_days : "-";
         working_days_edit.value = working_days.innerText;
         holidays.innerText = response.data.data.holidays !== null ? response.data.data.holidays : "-";
+        sickleave.innerText = response.data.data.sickleave !== null ? response.data.data.sickleave : "-";
         if (response.data.data.working_days !== null
             && response.data.data.office_days !== null
             && response.data.data.month_target !== null) {
 
-            calc = (response.data.data.office_days / (((response.data.data.working_days - response.data.data.holidays) * response.data.data.month_target) / 100)) * 100;
-            office_min.innerText = response.data.data.office_days + "/" + (((response.data.data.working_days - response.data.data.holidays) * response.data.data.month_target) / 100);
+            calc = (response.data.data.office_days / (((response.data.data.working_days - (response.data.data.holidays + response.data.data.sickleave)) * response.data.data.month_target) / 100)) * 100;
+            office_min.innerText = response.data.data.office_days + "/" + (((response.data.data.working_days - (response.data.data.holidays + response.data.data.sickleave)) * response.data.data.month_target) / 100);
         }
 
         if (response.data.data.working_days_year !== null
             && response.data.data.office_days_year !== null
             && response.data.data.year_target !== null) {
 
-            calc_year = (response.data.data.office_days_year / (((response.data.data.working_days_year - response.data.data.holidays_year) * response.data.data.year_target) / 100)) * 100;
+            calc_year = (response.data.data.office_days_year / (((response.data.data.working_days_year - (response.data.data.holidays_year + response.data.data.sickleave_year)) * response.data.data.year_target) / 100)) * 100;
         }
 
         if (calc >= 100) {

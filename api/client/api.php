@@ -127,6 +127,14 @@ class API {
         $stmt->execute();
         $holidays_found = $stmt->fetchAll(\PDO::FETCH_COLUMN);
 
+        $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") FROM wfo_sickleave WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':start', $start, \PDO::PARAM_STR);
+        $stmt->bindValue(':end', $end, \PDO::PARAM_STR);
+        $stmt->execute();
+        $sickleave_found = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
         $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") FROM wfo_bank_holidays WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
@@ -159,6 +167,14 @@ class API {
                     "color" => $_ENV['holiday_color'],
                     "cursor" => "pointer"
                 ];
+            } elseif (in_array($dt->format("Y-m-d"), $sickleave_found)) {
+                $res[] = [
+                    "title" => $_ENV['sickleave_label'],
+                    "start" => $dt->format("Y-m-d"),
+                    "end" => $dt->format("Y-m-d"),
+                    "color" => $_ENV['sickleave_color'],
+                    "cursor" => "pointer"
+                ];
             } elseif (in_array($dt->format("Y-m-d"), $days_found)) {
                 $res[] = [
                     "title" => $_ENV['office_day_label'],
@@ -170,6 +186,7 @@ class API {
                 ];
                 $res[] = $this->generate_holiday_event($dt);
                 $res[] = $this->generate_bank_holiday_event($dt);
+                $res[] = $this->generate_sickleave_event($dt);
             } else {
                 if (in_array($dt->format("N"), [1, 2, 3, 4, 5])) {
                     $res[] = [
@@ -182,6 +199,7 @@ class API {
                     ];
                     $res[] = $this->generate_holiday_event($dt);
                     $res[] = $this->generate_bank_holiday_event($dt);
+                    $res[] = $this->generate_sickleave_event($dt);
                 }
             }
         }
@@ -191,6 +209,18 @@ class API {
     private function generate_holiday_event($dt) {
         return [
             "title" => "🏖️ Add holiday",
+            "start" => $dt->format("Y-m-d"),
+            "end" => $dt->format("Y-m-d"),
+            "color" => $_ENV['add_holiday_color'],
+            "textColor" => $_ENV['add_holiday_text_color'],
+            "cursor" => "pointer",
+            "id" => 9
+        ];
+    }
+
+    private function generate_sickleave_event($dt) {
+        return [
+            "title" => "🤒 Add Sick Leave",
             "start" => $dt->format("Y-m-d"),
             "end" => $dt->format("Y-m-d"),
             "color" => $_ENV['add_holiday_color'],
@@ -247,6 +277,7 @@ class API {
             $result = $this->delete_wfo_day($day);
         } else {
             $result = $this->delete_wfo_holidays($day);
+            $result = $this->delete_wfo_sickleave($day);
             $result = $this->delete_wfo_bank_holidays($day);
 
             $query = "REPLACE INTO wfo_days (defined_date, user_id) VALUES (:day, :user_id)";
@@ -447,6 +478,66 @@ class API {
 
     public function delete_wfo_bank_holidays($day) {
         $query = "DELETE from wfo_bank_holidays WHERE user_id = :user_id AND defined_date = :day";
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
+        return $stmt->execute();
+    }
+
+    public function get_wfo_sickleave($year, $month = NULL) {
+        $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") FROM wfo_sickleave WHERE user_id = :user_id AND YEAR(defined_date) = :year ';
+        if (!is_null($month)) {
+            $query .= " and MONTH(defined_date) = :month";
+        }
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        if (!is_null($month)) {
+            $stmt->bindValue(':month', $month, \PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+
+        $days_found = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        return $days_found;
+    }
+
+    public function get_wfo_sickleave_count($year, $month = NULL) {
+        $query = 'SELECT count(*) FROM wfo_sickleave WHERE user_id = :user_id AND YEAR(defined_date) = :year ';
+        if (!is_null($month)) {
+            $query .= " and MONTH(defined_date) = :month";
+        }
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        if (!is_null($month)) {
+            $stmt->bindValue(':month', $month, \PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+
+        $target_found = $stmt->fetchColumn();
+        return $target_found;
+    }
+
+    public function add_wfo_sickleave($day) {
+        $this->delete_wfo_day($day);
+
+        $query = "REPLACE INTO wfo_sickleave (defined_date, user_id) VALUES (:day, :user_id)";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
+
+        $result = $stmt->execute();
+
+        return $result;
+    }
+
+    public function delete_wfo_sickleave($day) {
+        $query = "DELETE from wfo_sickleave WHERE user_id = :user_id AND defined_date = :day";
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->bindValue(':day', $day, \PDO::PARAM_STR);

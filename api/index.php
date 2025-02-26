@@ -189,6 +189,10 @@ $router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
         $result['holidays'] = $holidays ? $holidays : 0;
         $holidays_year = $api->get_wfo_holidays_count($year);
         $result['holidays_year'] = $holidays_year ? $holidays_year : 0;
+        $sickleave = $api->get_wfo_sickleave_count($year, $month);
+        $result['sickleave'] = $sickleave ? $sickleave : 0;
+        $sickleave_year = $api->get_wfo_sickleave_count($year);
+        $result['sickleave_year'] = $sickleave_year ? $sickleave_year : 0;
         if ($result) {
             echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $result]);
         } else {
@@ -239,6 +243,27 @@ $router->post('/holiday/add', function () {
         $day = date('Y-m-d', strtotime($j['day']));
         $api = new API();
         $result = $api->add_wfo_holiday($day);
+        if ($result) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
+        } else {
+            throw new \Exception("Unable to add Holiday!", 1);
+        }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/sickleave/add', function () {
+    $j = json_decode(file_get_contents("php://input"), true);
+    if (is_null($j) || $j === false) {
+        header('HTTP/1.1 400 Bad Request');
+        echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+        die();
+    }
+    try {
+        $day = date('Y-m-d', strtotime($j['day']));
+        $api = new API();
+        $result = $api->add_wfo_sickleave($day);
         if ($result) {
             echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
         } else {
