@@ -43,6 +43,23 @@ function set_year_target(year, target) {
     });
 }
 
+
+async function generate_commands() {
+    let response;
+    response = await axios.get(`api/generate-commands`).then(response => {
+        txt = "";
+        response.data.data.forEach((el) => {
+            if (el !== undefined) {
+                txt += el + "<br>";
+            }
+        })
+        document.getElementById("generatedCommandsBody").innerHTML = txt;
+        return null;
+    }).catch(error => {
+        return null;
+    });
+}
+
 function update_stats(year, month) {
     const month_target = document.getElementById('month-target');
     const month_target_progressbar = document.getElementById('month-target-progressbar');
