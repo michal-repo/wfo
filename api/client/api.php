@@ -553,7 +553,7 @@ class API {
         $commands = $stmt->fetchAll();
 
         foreach ($commands as $command) {
-            $query = 'SELECT DATE_FORMAT(DATE_SUB(defined_date, INTERVAL :days_in_advance DAY), "%d-%m-%Y") as "date" FROM wfo_days WHERE user_id = :user_id and defined_date > DATE_ADD(CURRENT_DATE, INTERVAL :days_in_advance DAY)';
+            $query = 'SELECT DATE_FORMAT(DATE_SUB(defined_date, INTERVAL :days_in_advance DAY), "%d.%m.%Y") as "date" FROM wfo_days WHERE user_id = :user_id and defined_date > DATE_ADD(CURRENT_DATE, INTERVAL :days_in_advance DAY)';
             $stmt = $this->db->dbh->prepare($query);
             $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
             $stmt->bindValue(':days_in_advance', $command['days_in_advance'], \PDO::PARAM_INT);
