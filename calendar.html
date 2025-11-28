@@ -104,6 +104,29 @@
                 }).catch(error => {
                     console.error('There was an error switching the day:', error);
                 });
+            } else if (event_text.includes("Add Overtime")) {
+                const hours = prompt("How many hours of overtime?");
+                if (hours != null) {
+                    axios.post(`api/overtime/add`, {
+                        date: day,
+                        hours: hours
+                    }).then(response => {
+                        calendar.refetchEvents();
+                    }).catch(error => {
+                        console.error('There was an error switching the day:', error);
+                    });
+                }
+            } else if (event_text.includes("h Overtime")) {
+                const hours = confirm("Remove overtime?");
+                if (hours != null) {
+                    axios.post(`api/overtime/delete`, {
+                        date: day
+                    }).then(response => {
+                        calendar.refetchEvents();
+                    }).catch(error => {
+                        console.error('There was an error deleting overtime on the day:', error);
+                    });
+                }
             } else {
                 axios.post(`api/switch`, {
                     day: day

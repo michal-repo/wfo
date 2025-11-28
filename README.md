@@ -1,5 +1,9 @@
 # Work From Office/Home Calendar
 
+## If you liked it you can support my work
+[!["Buy Me A Coffee"](https://raw.githubusercontent.com/michal-repo/random_stuff/refs/heads/main/bmac_small.png)](https://buymeacoffee.com/michaldev)
+
+
 
 ![WFO-1](Screenshot%20WFO%20Calendar.png?raw=true)
 
