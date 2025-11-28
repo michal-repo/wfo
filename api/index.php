@@ -193,6 +193,15 @@ $router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
         $result['sickleave'] = $sickleave ? $sickleave : 0;
         $sickleave_year = $api->get_wfo_sickleave_count($year);
         $result['sickleave_year'] = $sickleave_year ? $sickleave_year : 0;
+        $overtime = $api->get_wfo_overtime_hours_sum($year, $month);
+        $result['overtime'] = $overtime;
+        $overtime_year = $api->get_wfo_overtime_hours_sum($year);
+        $result['overtime_year'] = $overtime_year;
+        $overtime = $api->get_wfo_overtime_hours_sum_office_only($year, $month);
+        $result['overtime_office_only'] = $overtime;
+        $overtime_year = $api->get_wfo_overtime_hours_sum_office_only($year);
+        $result['overtime_year_office_only'] = $overtime_year;
+        
         if ($result) {
             echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $result]);
         } else {
@@ -304,6 +313,69 @@ $router->post('/working-days/year/(\d+)/month/(\d+)/working-days/(\d+)', functio
         } else {
             throw new \Exception("Unable to add new value! Data... year: " . strval($year) . " month: " . strval($month) . " working_days: " . strval($working_days), 1);
         }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/overtime/add', function () {
+    $j = json_decode(file_get_contents("php://input"), true);
+    if (is_null($j) || $j === false) {
+        header('HTTP/1.1 400 Bad Request');
+        echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+        die();
+    }
+    try {
+        $date = date('Y-m-d', strtotime($j['date']));
+        $hours = $j['hours'];
+        $api = new API();
+        $result = $api->add_wfo_overtime($date, $hours);
+        if ($result) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
+        } else {
+            throw new \Exception("Unable to add overtime!", 1);
+        }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/overtime/delete', function () {
+    $j = json_decode(file_get_contents("php://input"), true);
+    if (is_null($j) || $j === false) {
+        header('HTTP/1.1 400 Bad Request');
+        echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+        die();
+    }
+    try {
+        $date = date('Y-m-d', strtotime($j['date']));
+        $api = new API();
+        $result = $api->delete_wfo_overtime($date);
+        if ($result) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'deleted']);
+        } else {
+            throw new \Exception("Unable to delete overtime!", 1);
+        }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->get('/overtime/year/(\d+)', function ($year) {
+    try {
+        $api = new API();
+        $days = $api->get_wfo_overtime($year);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $days]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->get('/overtime/year/(\d+)/month/(\d+)', function ($year, $month) {
+    try {
+        $api = new API();
+        $days = $api->get_wfo_overtime($year, $month);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $days]);
     } catch (\Throwable $th) {
         handleErr($th);
     }

@@ -143,6 +143,15 @@ class API {
         $stmt->execute();
         $bank_holidays_found = $stmt->fetchAll(\PDO::FETCH_COLUMN);
 
+        $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") as defined_date, overtime_hours FROM wfo_overtime WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':start', $start, \PDO::PARAM_STR);
+        $stmt->bindValue(':end', $end, \PDO::PARAM_STR);
+        $stmt->execute();
+        $overtime_found = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $overtime_days = array_column($overtime_found, 'defined_date');
+
 
         $res = [];
         $begin = new \DateTime($start);
@@ -187,6 +196,7 @@ class API {
                 $res[] = $this->generate_holiday_event($dt);
                 $res[] = $this->generate_bank_holiday_event($dt);
                 $res[] = $this->generate_sickleave_event($dt);
+                $res[] = $this->generate_overtime_event($dt);
             } else {
                 if (in_array($dt->format("N"), [1, 2, 3, 4, 5])) {
                     $res[] = [
@@ -200,7 +210,18 @@ class API {
                     $res[] = $this->generate_holiday_event($dt);
                     $res[] = $this->generate_bank_holiday_event($dt);
                     $res[] = $this->generate_sickleave_event($dt);
+                    $res[] = $this->generate_overtime_event($dt);
                 }
+            }
+            $overtime_key = array_search($dt->format("Y-m-d"), $overtime_days);
+            if ($overtime_key !== false) {
+                $res[] = [
+                    "title" => "💪 " . $overtime_found[$overtime_key]['overtime_hours'] . "h Overtime",
+                    "start" => $dt->format("Y-m-d"),
+                    "end" => $dt->format("Y-m-d"),
+                    "color" => "#a832a8",
+                    "cursor" => "pointer"
+                ];
             }
         }
         return $res;
@@ -215,6 +236,18 @@ class API {
             "textColor" => $_ENV['add_holiday_text_color'],
             "cursor" => "pointer",
             "id" => 9
+        ];
+    }
+
+    private function generate_overtime_event($dt) {
+        return [
+            "title" => "💪 Add Overtime",
+            "start" => $dt->format("Y-m-d"),
+            "end" => $dt->format("Y-m-d"),
+            "color" => $_ENV['add_holiday_color'],
+            "textColor" => $_ENV['add_holiday_text_color'],
+            "cursor" => "pointer",
+            "id" => 10
         ];
     }
 
@@ -542,5 +575,85 @@ class API {
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
         return $stmt->execute();
+    }
+
+    public function add_wfo_overtime($date, $hours) {
+        $query = "REPLACE INTO wfo_overtime (defined_date, overtime_hours, user_id) VALUES (:defined_date, :overtime_hours, :user_id)";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':defined_date', $date, \PDO::PARAM_STR);
+        $stmt->bindValue(':overtime_hours', $hours, \PDO::PARAM_STR);
+
+        $result = $stmt->execute();
+
+        return $result;
+    }
+
+    public function delete_wfo_overtime($date) {
+        $query = "DELETE from wfo_overtime WHERE user_id = :user_id AND defined_date = :date";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':date', $date, \PDO::PARAM_STR);
+
+        return $stmt->execute();
+    }
+
+    public function get_wfo_overtime($year, $month = NULL) {
+        $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") as defined_date, overtime_hours FROM wfo_overtime WHERE user_id = :user_id AND YEAR(defined_date) = :year ';
+        if (!is_null($month)) {
+            $query .= " and MONTH(defined_date) = :month";
+        }
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        if (!is_null($month)) {
+            $stmt->bindValue(':month', $month, \PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+
+        $days_found = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        return $days_found;
+    }
+
+    public function get_wfo_overtime_hours_sum($year, $month = NULL) {
+        $query = 'SELECT SUM(overtime_hours) FROM wfo_overtime WHERE user_id = :user_id AND YEAR(defined_date) = :year ';
+        if (!is_null($month)) {
+            $query .= " and MONTH(defined_date) = :month";
+        }
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        if (!is_null($month)) {
+            $stmt->bindValue(':month', $month, \PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+
+        $sum = $stmt->fetchColumn();
+        return $sum ? $sum : 0;
+    }
+
+    public function get_wfo_overtime_hours_sum_office_only($year, $month = NULL) {
+        $query = 'SELECT SUM(t1.overtime_hours) FROM wfo_overtime as t1 INNER JOIN wfo_days as t2 ON t1.defined_date = t2.defined_date AND t1.user_id = t2.user_id WHERE t1.user_id = :user_id AND YEAR(t1.defined_date) = :year';
+        if (!is_null($month)) {
+            $query .= " and MONTH(t1.defined_date) = :month";
+        }
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        if (!is_null($month)) {
+            $stmt->bindValue(':month', $month, \PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+
+        $sum = $stmt->fetchColumn();
+        return $sum ? $sum : 0;
     }
 }
