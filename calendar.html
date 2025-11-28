@@ -30,6 +30,7 @@
                 }
                 calendar = new FullCalendar.Calendar(calendarEl, {
                     timeZone: 'UTC',
+                    locale: 'pl',
                     themeSystem: 'bootstrap5',
                     initialView: 'dayGridMonth',
                     weekNumberCalculation: "ISO",
@@ -178,17 +179,23 @@
                     </div>
                     <div class="col">
                         <h5>
-                            Holidays - <b id="holidays"></b>
+                            <span>Holidays - <b id="holidays"></b></span>
+
+                            <span class="ms-5">Sick leave - <b id="sickleave"></b></span>
+
                         </h5>
                     </div>
                     <div class="col">
                         <h5>
-                            Sick leave - <b id="sickleave"></b>
-                        </h5>
-                    </div>
-                    <div class="col">
-                        <h5>
-                            Overtime - <b id="overtime"></b>
+                            <span>Generate commands </span>
+                            <button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
+                                data-bs-target="#generatedCommands" onclick="(function(){
+                                    generate_commands();
+                                    return true;
+                                    })();return true;">
+                                <i class="bi bi-wrench-adjustable-circle"></i>
+
+                            </button>
                         </h5>
                     </div>
                 </div>
@@ -307,6 +314,28 @@
             </div>
         </div>
     </div>
+
+
+    <div class="modal fade modal-xl" id="generatedCommands" tabindex="-1" aria-labelledby="generatedCommandsLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="generatedCommandsLabel">Generated commands</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <code id="generatedCommandsBody"></code>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
 </body>
 

@@ -381,6 +381,16 @@ $router->get('/overtime/year/(\d+)/month/(\d+)', function ($year, $month) {
     }
 });
 
+$router->get('/generate-commands', function () {
+    try {
+        $api = new API();
+        $commands = $api->generate_wfo_custom_command();
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $commands]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
 function checkGetParam($param, $default) {
     if (isset($_GET[$param])) {
         return $_GET[$param];
