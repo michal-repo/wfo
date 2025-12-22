@@ -201,7 +201,7 @@ $router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
         $result['overtime_office_only'] = $overtime;
         $overtime_year = $api->get_wfo_overtime_hours_sum_office_only($year);
         $result['overtime_year_office_only'] = $overtime_year;
-        
+
         if ($result) {
             echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $result]);
         } else {
@@ -391,14 +391,82 @@ $router->get('/generate-commands', function () {
     }
 });
 
-function checkGetParam($param, $default) {
+
+$router->get('/get-tokens', function () {
+    try {
+        $api = new API();
+        $commands = $api->get_access_tokens();
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $commands]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+
+$router->post('/generate-token', function () {
+    try {
+        $j = json_decode(file_get_contents("php://input"), true);
+        if (is_null($j) || $j === false || !isset($j['token_name'])) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON with token_name']]);
+            die();
+        }
+        if (empty($j['token_name'])) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Token name cannot be empty']]);
+            die();
+        }
+        $api = new API();
+        $token = $api->generate_access_token($j['token_name']);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['token' => $token]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/revoke-token', function () {
+    try {
+        $j = json_decode(file_get_contents("php://input"), true);
+        if (is_null($j) || $j === false || !isset($j['token_id'])) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON with token_id']]);
+            die();
+        }
+        $api = new API();
+        $result = $api->revoke_access_token($j['token_id']);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+
+$router->post('/get-info', function () {
+    try {
+        $j = json_decode(file_get_contents("php://input"), true);
+        if (is_null($j) || $j === false) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+            die();
+        }
+        $api = new API();
+        $result = $api->get_info($j['token'], $j['in_x_days']);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+function checkGetParam($param, $default)
+{
     if (isset($_GET[$param])) {
         return $_GET[$param];
     }
     return $default;
 }
 
-function handleErr($message) {
+function handleErr($message)
+{
     header('HTTP/1.1 500 Internal Server Error');
     if ($_ENV['debug'] === "true") {
         var_dump($message);
@@ -410,7 +478,8 @@ function handleErr($message) {
     }
 }
 
-function log_in_check($just_check = false) {
+function log_in_check($just_check = false)
+{
     $api = new API();
     if ($api->isLoggedIn()) {
         if (!$just_check) {

@@ -60,6 +60,48 @@ async function generate_commands() {
     });
 }
 
+async function get_tokens() {
+    let response;
+    document.getElementById("existing-tokens-list").innerHTML = ""; // Clear existing list
+    response = await axios.get(`api/get-tokens`).then(response => {
+        response.data.data.forEach((el) => {
+            if (el !== undefined) {
+                document.getElementById("existing-tokens-list").innerHTML += "<div> ID: " + el.id + ", Name: " + el.token_name + "<button onclick=\"deleteToken(" + el.id + ")\">Delete</button></div>"; // Append to existing list
+            }
+        })
+        return null;
+    }).catch(error => {
+        return null;
+    });
+}
+
+async function deleteToken(token_id) {
+    let response;
+    response = await axios.post(`api/revoke-token`, { token_id: token_id }).then(response => {
+        alert("Token deleted successfully. Please refresh the page to see the updated list.");
+        get_tokens();
+        return true;
+    }).catch(error => {
+        alert("Error deleting token.");
+        return null;
+    });
+}
+
+async function newToken(element, token_name_input_id) {
+    if (document.getElementById(token_name_input_id).value.trim() === "") {
+        alert("Please enter a token name.");
+        return null;
+    }
+    let response;
+    response = await axios.post(`api/generate-token`, { token_name: document.getElementById(token_name_input_id).value }).then(response => {
+        document.getElementById(element).value = response.data.data.token;
+        get_tokens();
+        return true;
+    }).catch(error => {
+        return null;
+    });
+}
+
 function update_stats(year, month) {
     const month_target = document.getElementById('month-target');
     const month_target_progressbar = document.getElementById('month-target-progressbar');

@@ -2,251 +2,250 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WFO Calendar</title>
-    <link rel="icon" href="favicon.png" type="image/png">
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js'></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
-        crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <script src="scripts.js"></script>
-    <link href='style.css' rel='stylesheet'>
-    <script defer>
-        let calendar;
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>WFO Calendar</title>
+	<link rel="icon" href="favicon.png" type="image/png">
+	<script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js'></script>
+	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+		integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+		crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+	<script src="scripts.js"></script>
+	<link href='style.css' rel='stylesheet'>
+	<script defer>
+		let calendar;
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const calendarEl = document.getElementById('calendar');
-            login_check().then(r => {
-                let headerToolbarCustomButtons = "";
-                if (r) {
-                    headerToolbarCustomButtons += " LogOut";
-                } else {
-                    headerToolbarCustomButtons += " LogIn";
-                }
-                calendar = new FullCalendar.Calendar(calendarEl, {
-                    timeZone: 'UTC',
-                    locale: 'pl',
-                    themeSystem: 'bootstrap5',
-                    initialView: 'dayGridMonth',
-                    weekNumberCalculation: "ISO",
-                    height: get_cal_height(),
-                    windowResize: function (arg) {
-                        calendar.setOption('height', get_cal_height());
-                    },
-                    eventClick: function (info) {
-                        switch_day(info.event.start.toISOString(), info.event.title)
-                    },
-                    eventOrder: "id,start,-duration,allDay,title",
-                    customButtons: {
-                        LogOut: {
-                            text: 'Log out',
-                            click: function () {
-                                log_out();
-                            },
-                            hint: "Log out"
-                        },
-                        LogIn: {
-                            text: 'Log in/Register',
-                            click: function () {
-                                window.location.replace("/wfo");
-                            },
-                            hint: "Log in or Register"
-                        }
-                    },
-                    headerToolbar: {
-                        left: 'dayGridMonth,timeGridWeek' + headerToolbarCustomButtons,
-                        center: 'title',
-                        right: 'prev,next today'
-                    },
-                    events: 'api/feed'
-                })
-                calendar.render();
+		document.addEventListener('DOMContentLoaded', function () {
+			const calendarEl = document.getElementById('calendar');
+			login_check().then(r => {
+				let headerToolbarCustomButtons = "";
+				if (r) {
+					headerToolbarCustomButtons += " LogOut";
+				} else {
+					headerToolbarCustomButtons += " LogIn";
+				}
+				calendar = new FullCalendar.Calendar(calendarEl, {
+					timeZone: 'UTC',
+					locale: 'pl',
+					themeSystem: 'bootstrap5',
+					initialView: 'dayGridMonth',
+					weekNumberCalculation: "ISO",
+					height: get_cal_height(),
+					windowResize: function (arg) {
+						calendar.setOption('height', get_cal_height());
+					},
+					eventClick: function (info) {
+						switch_day(info.event.start.toISOString(), info.event.title)
+					},
+					eventOrder: "id,start,-duration,allDay,title",
+					customButtons: {
+						LogOut: {
+							text: 'Log out',
+							click: function () {
+								log_out();
+							},
+							hint: "Log out"
+						},
+						LogIn: {
+							text: 'Log in/Register',
+							click: function () {
+								window.location.replace("/wfo");
+							},
+							hint: "Log in or Register"
+						}
+					},
+					headerToolbar: {
+						left: 'dayGridMonth,timeGridWeek' + headerToolbarCustomButtons,
+						center: 'title',
+						right: 'prev,next today'
+					},
+					events: 'api/feed'
+				})
+				calendar.render();
 
-                let target = document.getElementById('calendar');
-                let observer = new MutationObserver(function (mutations) {
-                    update_stats(calendar.getDate().getFullYear(), calendar.getDate().getMonth() + 1);
-                });
-                let config = { attributes: true, childList: true, characterData: true, subtree: true };
-                observer.observe(target, config);
+				let target = document.getElementById('calendar');
+				let observer = new MutationObserver(function (mutations) {
+					update_stats(calendar.getDate().getFullYear(), calendar.getDate().getMonth() + 1);
+				});
+				let config = { attributes: true, childList: true, characterData: true, subtree: true };
+				observer.observe(target, config);
 
 
-            });
+			});
 
-        })
+		})
 
-        function switch_day(day, event_text) {
-            if (event_text.includes("Add Bank holiday")) {
-                axios.post(`api/bank-holiday/add`, {
-                    day: day
-                }).then(response => {
-                    calendar.refetchEvents();
-                }).catch(error => {
-                    console.error('There was an error switching the day:', error);
-                });
-            } else if (event_text.includes("Add holiday")) {
-                axios.post(`api/holiday/add`, {
-                    day: day
-                }).then(response => {
-                    calendar.refetchEvents();
-                }).catch(error => {
-                    console.error('There was an error switching the day:', error);
-                });
-            } else if (event_text.includes("Add Sick Leave")) {
-                axios.post(`api/sickleave/add`, {
-                    day: day
-                }).then(response => {
-                    calendar.refetchEvents();
-                }).catch(error => {
-                    console.error('There was an error switching the day:', error);
-                });
-            } else if (event_text.includes("Add Overtime")) {
-                const hours = prompt("How many hours of overtime?");
-                if (hours != null) {
-                    axios.post(`api/overtime/add`, {
-                        date: day,
-                        hours: hours
-                    }).then(response => {
-                        calendar.refetchEvents();
-                    }).catch(error => {
-                        console.error('There was an error switching the day:', error);
-                    });
-                }
-            } else if (event_text.includes("h Overtime")) {
-                const hours = confirm("Remove overtime?");
-                if (hours != null) {
-                    axios.post(`api/overtime/delete`, {
-                        date: day
-                    }).then(response => {
-                        calendar.refetchEvents();
-                    }).catch(error => {
-                        console.error('There was an error deleting overtime on the day:', error);
-                    });
-                }
-            } else {
-                axios.post(`api/switch`, {
-                    day: day
-                }).then(response => {
-                    calendar.refetchEvents();
-                }).catch(error => {
-                    console.error('There was an error switching the day:', error);
-                });
-            }
-        }
+		function switch_day(day, event_text) {
+			if (event_text.includes("Add Bank holiday")) {
+				axios.post(`api/bank-holiday/add`, {
+					day: day
+				}).then(response => {
+					calendar.refetchEvents();
+				}).catch(error => {
+					console.error('There was an error switching the day:', error);
+				});
+			} else if (event_text.includes("Add holiday")) {
+				axios.post(`api/holiday/add`, {
+					day: day
+				}).then(response => {
+					calendar.refetchEvents();
+				}).catch(error => {
+					console.error('There was an error switching the day:', error);
+				});
+			} else if (event_text.includes("Add Sick Leave")) {
+				axios.post(`api/sickleave/add`, {
+					day: day
+				}).then(response => {
+					calendar.refetchEvents();
+				}).catch(error => {
+					console.error('There was an error switching the day:', error);
+				});
+			} else if (event_text.includes("Add Overtime")) {
+				const hours = prompt("How many hours of overtime?");
+				if (hours != null) {
+					axios.post(`api/overtime/add`, {
+						date: day,
+						hours: hours
+					}).then(response => {
+						calendar.refetchEvents();
+					}).catch(error => {
+						console.error('There was an error switching the day:', error);
+					});
+				}
+			} else if (event_text.includes("h Overtime")) {
+				const hours = confirm("Remove overtime?");
+				if (hours != null) {
+					axios.post(`api/overtime/delete`, {
+						date: day
+					}).then(response => {
+						calendar.refetchEvents();
+					}).catch(error => {
+						console.error('There was an error deleting overtime on the day:', error);
+					});
+				}
+			} else {
+				axios.post(`api/switch`, {
+					day: day
+				}).then(response => {
+					calendar.refetchEvents();
+				}).catch(error => {
+					console.error('There was an error switching the day:', error);
+				});
+			}
+		}
 
-        function log_out() {
-            axios.post(`api/log-out`).then(response => {
-                window.location.replace("/wfo");
-            }).catch(error => {
-                console.error('There was an error: ', error);
-            });
-        }
+		function log_out() {
+			axios.post(`api/log-out`).then(response => {
+				window.location.replace("/wfo");
+			}).catch(error => {
+				console.error('There was an error: ', error);
+			});
+		}
 
-        function get_cal_height() {
-            return document.getElementById("wfo-calendar").offsetHeight;
-        }
+		function get_cal_height() {
+			return document.getElementById("wfo-calendar").offsetHeight;
+		}
 
-    </script>
+	</script>
 </head>
 
 <body>
-    <div id="stats" class="stats container-fluid">
-        <div class="row">
-            <div class="col-10">
-                <div class="row">
-                    <div class="col">
-                        <h5>Month Target - <b><span id="month-target"></span>%</b>
-                            <button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-                                data-bs-target="#monthTargetModal">
-                                <i class="bi bi-pencil-square"></i>
-                            </button>
-                        </h5>
-                    </div>
-                    <div class="col">
-                        <h5>Working Days - <b id="working-days"></b>
-                            <button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-                                data-bs-target="#workingDaysModal">
-                                <i class="bi bi-pencil-square"></i>
-                            </button>
-                        </h5>
-                    </div>
-                    <div class="col">
-                        <h5>Office days (actual/min.) - <b id="office-actual-min"></b></h5>
-                    </div>
-                    <div class="col">
-                        <h5>
-                            Holidays - <b id="holidays"></b>
-                        </h5>
-                    </div>
-                    <div class="col">
-                        <h5>
-                            Sick leave - <b id="sickleave"></b>
-                        </h5>
-                    </div>
-                    <div class="col">
-                        <h5>
-                            Overtime - <b id="overtime"></b>
-                        </h5>
-                    </div>
-                    <div class="col">
-                        <h5>
-                            <span>Generate commands </span>
-                            <button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-                                data-bs-target="#generatedCommands" onclick="(function(){
-                                    generate_commands();
+	<div id="stats" class="stats container-fluid">
+		<div class="row">
+			<div class="col-10">
+				<div class="row">
+					<div class="col">
+						<h5>Month Target - <b><span id="month-target"></span>%</b>
+							<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
+								data-bs-target="#monthTargetModal">
+								<i class="bi bi-pencil-square"></i>
+							</button>
+						</h5>
+					</div>
+					<div class="col">
+						<h5>Working Days - <b id="working-days"></b>
+							<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
+								data-bs-target="#workingDaysModal">
+								<i class="bi bi-pencil-square"></i>
+							</button>
+						</h5>
+					</div>
+					<div class="col">
+						<h5>Office days (actual/min.) - <b id="office-actual-min"></b></h5>
+					</div>
+					<div class="col">
+						<h5>
+							Holidays - <b id="holidays"></b>
+						</h5>
+					</div>
+					<div class="col">
+						<h5>
+							Sick leave - <b id="sickleave"></b>
+						</h5>
+					</div>
+					<div class="col">
+						<h5>
+							Overtime - <b id="overtime"></b>
+						</h5>
+					</div>
+					<div class="col">
+						<h5>
+							<span>Access tokens </span>
+							<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
+								data-bs-target="#tokensCommands"  onclick="(function(){
+                                    get_tokens();
                                     return true;
                                     })();return true;">
-                                <i class="bi bi-wrench-adjustable-circle"></i>
-
-                            </button>
-                        </h5>
-                    </div>
-                </div>
-                <div class="progress">
-                    <div class="progress-bar" id="month-target-progressbar" role="progressbar"></div>
-                </div>
-            </div>
-            <div class="col-2">
-                <h5>Year Target - <b><span id="year-target"></span>%</b>
-                    <button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-                        data-bs-target="#yearTargetModal">
-                        <i class="bi bi-pencil-square"></i>
-                    </button>
-                </h5>
-                <div class="progress">
-                    <div class="progress-bar" id="year-target-progressbar" role="progressbar"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <div id="wfo-calendar" class="wfo-calendar">
-        <div id='calendar'></div>
-    </div>
+								<i class="bi bi-wrench-adjustable-circle"></i>
+							</button>
+						</h5>
+					</div>
+				</div>
+				<div class="progress">
+					<div class="progress-bar" id="month-target-progressbar" role="progressbar"></div>
+				</div>
+			</div>
+			<div class="col-2">
+				<h5>Year Target - <b><span id="year-target"></span>%</b>
+					<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
+						data-bs-target="#yearTargetModal">
+						<i class="bi bi-pencil-square"></i>
+					</button>
+				</h5>
+				<div class="progress">
+					<div class="progress-bar" id="year-target-progressbar" role="progressbar"></div>
+				</div>
+			</div>
+		</div>
+	</div>
 
 
-    <div class="modal fade" id="monthTargetModal" tabindex="-1" aria-labelledby="monthTargetModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="monthTargetModalLabel">Modify month target</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="month-target-edit" class="form-label">Month Target</label>
-                        <input type="text" class="form-control" id="month-target-edit">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="(function(){
+	<div id="wfo-calendar" class="wfo-calendar">
+		<div id='calendar'></div>
+	</div>
+
+
+	<div class="modal fade" id="monthTargetModal" tabindex="-1" aria-labelledby="monthTargetModalLabel"
+		aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="monthTargetModalLabel">Modify month target</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label for="month-target-edit" class="form-label">Month Target</label>
+						<input type="text" class="form-control" id="month-target-edit">
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="(function(){
                         set_month_target(calendar.getDate().getFullYear(), 
                             calendar.getDate().getMonth() + 1, 
                             document.getElementById('month-target-edit').value
@@ -256,28 +255,28 @@
                         }, 500);
                         return true;
                     })();return true;">Save changes</button>
-                </div>
-            </div>
-        </div>
-    </div>
+				</div>
+			</div>
+		</div>
+	</div>
 
-    <div class="modal fade" id="workingDaysModal" tabindex="-1" aria-labelledby="workingDaysModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="workingDaysModalLabel">Modify working days</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="working-days-edit" class="form-label">workingDays</label>
-                        <input type="text" class="form-control" id="working-days-edit">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="(function(){
+	<div class="modal fade" id="workingDaysModal" tabindex="-1" aria-labelledby="workingDaysModalLabel"
+		aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="workingDaysModalLabel">Modify working days</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label for="working-days-edit" class="form-label">workingDays</label>
+						<input type="text" class="form-control" id="working-days-edit">
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="(function(){
                         set_working_days(calendar.getDate().getFullYear(), 
                             calendar.getDate().getMonth() + 1, 
                             document.getElementById('working-days-edit').value
@@ -287,28 +286,28 @@
                         }, 500);
                         return true;
                     })();return true;">Save changes</button>
-                </div>
-            </div>
-        </div>
-    </div>
+				</div>
+			</div>
+		</div>
+	</div>
 
-    <div class="modal fade" id="yearTargetModal" tabindex="-1" aria-labelledby="yearTargetModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="yearTargetModalLabel">Modify year target</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="year-target-edit" class="form-label">yearTarget</label>
-                        <input type="text" class="form-control" id="year-target-edit">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="(function(){
+	<div class="modal fade" id="yearTargetModal" tabindex="-1" aria-labelledby="yearTargetModalLabel"
+		aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="yearTargetModalLabel">Modify year target</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label for="year-target-edit" class="form-label">yearTarget</label>
+						<input type="text" class="form-control" id="year-target-edit">
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="(function(){
                         set_year_target(calendar.getDate().getFullYear(), 
                             document.getElementById('year-target-edit').value
                         );
@@ -317,11 +316,10 @@
                         }, 500);
                         return true;
                     })();return true;">Save changes</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+				</div>
+			</div>
+		</div>
+	</div>
 
     <div class="modal fade modal-xl" id="generatedCommands" tabindex="-1" aria-labelledby="generatedCommandsLabel"
         aria-hidden="true">
@@ -342,6 +340,44 @@
             </div>
         </div>
     </div>
+
+
+	<div class="modal fade modal-xl" id="tokensCommands" tabindex="-1" aria-labelledby="tokensCommandsLabel"
+		aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="tokensCommandsLabel">Tokens</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label for="token-name" class="form-label">Token Name</label>
+						<input type="text" class="form-control" id="token-name"
+							placeholder="Enter a name for the token">
+					</div>
+					<div class="mb-3">
+						<button type="button" class="btn btn-primary"
+							onclick="newToken('token-display', 'token-name')">Generate new token</button>
+						<div class="mt-3">
+							<label for="token-display" class="form-label">Generated Token:</label>
+							<input type="text" readonly class="form-control" id="token-display"
+								placeholder="Your new token will appear here...">
+						</div>
+
+					</div>
+					<hr>
+					<div class="mb-3">
+						<h5>Existing Tokens:</h5>
+						<div id="existing-tokens-list"></div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
 
 
 </body>
