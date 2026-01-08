@@ -457,6 +457,33 @@ $router->post('/get-info', function () {
     }
 });
 
+
+$router->get('/get-settings', function () {
+    try {
+        $api = new API();
+        $settings = $api->get_settings();
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $settings]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/save-settings', function () {
+    try {
+        $j = json_decode(file_get_contents("php://input"), true);
+        if (is_null($j) || $j === false) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+            die();
+        }
+        $api = new API();
+        $settings = $api->save_settings($j['days_to_show'], $j['language']);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $settings ? 'saved' : 'not saved']]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
 function checkGetParam($param, $default)
 {
     if (isset($_GET[$param])) {

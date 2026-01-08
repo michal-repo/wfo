@@ -102,6 +102,78 @@ async function newToken(element, token_name_input_id) {
     });
 }
 
+
+async function get_settings() {
+    try {
+        const resp = await axios.get(`api/get-settings`);
+        const data = resp.data && resp.data.data ? resp.data.data : resp.data;
+        // normalize days array
+        const days = Array.isArray(data.days_to_show) ? data.days_to_show : [];
+
+        let r = {};
+        r.days = days;
+        r.language = data.language || null;
+        return r;
+    } catch (error) {
+        return null;
+    }
+}
+
+async function populate_settings_in_modal() {
+    try {
+        const data = await get_settings();
+
+        const days = data.days || [];
+
+        // uncheck all first
+        document.querySelectorAll('#settings-days-to-show input[type=checkbox]').forEach(el => el.checked = false);
+        // check those returned
+        days.forEach(d => {
+            const el = document.querySelector(`#settings-days-to-show input[value="${d}"]`);
+            if (el) el.checked = true;
+        });
+
+        // set language select
+        if (data.language) {
+            const langEl = document.getElementById('settings-language');
+            if (langEl) langEl.value = data.language;
+        }
+    } catch (error) {
+        return null;
+    }
+}
+
+async function save_settings() {
+    try {
+        const checked = Array.from(document.querySelectorAll('#settings-days-to-show input[type=checkbox]:checked'))
+            .map(el => el.value);
+        const language = document.getElementById('settings-language') ? document.getElementById('settings-language').value : null;
+
+        await axios.post(`api/save-settings`, {
+            days_to_show: checked,
+            language: language
+        });
+        // optional: give feedback
+        return true;
+    } catch (error) {
+        return null;
+    }
+}
+
+function generate_hidden_days(days) {
+    if (!days || days.length === 0) {
+        return [];
+    }
+    const predefined_days = { 0: "sun", 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat" };
+    let hidden_days = [];
+    for (const [i, value] of Object.entries(predefined_days)) {
+        if (!days.includes(value)) {
+            hidden_days.push(parseInt(i));
+        }
+    };
+    return hidden_days;
+}
+
 function update_stats(year, month) {
     const month_target = document.getElementById('month-target');
     const month_target_progressbar = document.getElementById('month-target-progressbar');

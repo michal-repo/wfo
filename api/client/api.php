@@ -800,4 +800,38 @@ class API
             "date" => null
         ];
     }
+
+    public function get_settings()
+    {
+        $query = "SELECT days_to_show, language FROM settings WHERE user_id = :user_id";
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->execute();
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $r = [];
+        $r['days_to_show'] = $result['days_to_show'] ? explode(",", $result['days_to_show']) : [];
+        $r['language'] = $result['language'] ?? 'en';
+        return $r;
+    }
+
+    public function save_settings($days_to_show, $language)
+    {
+        if (is_array($days_to_show)) {
+            $days_to_show = implode(",", $days_to_show);
+        } else {
+            $days_to_show = "";
+        }
+        $query = "REPLACE INTO settings (days_to_show, language, user_id) VALUES (:days_to_show, :language, :user_id)";
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':days_to_show', $days_to_show, \PDO::PARAM_STR);
+        $stmt->bindValue(':language', $language, \PDO::PARAM_STR);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $result = $stmt->execute();
+        
+        if ($result) {
+            return true;
+        } else {
+            throw new \Exception("Unable to save settings!", 1);
+        }
+    }
 }
