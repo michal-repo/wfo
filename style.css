@@ -1,33 +1,58 @@
 .stats {
-    height: 7vh;
+  height: 7vh;
 }
 
 .wfo-calendar {
-    height: 93vh;
+  height: 93vh;
 }
 
-@media only screen and (max-width: 800px) {
-    .stats {
-        display: none;
-    }
+@media only screen and (max-width: 1300px) {
+  .stats {
+    display: none;
+  }
 
-    .wfo-calendar {
-        height: 100vh;
-    }
+  .wfo-calendar {
+    height: 100vh;
+  }
 }
 
 .fc-event {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 .fc-LogIn-button {
-    color: #fff !important;
-    background-color: #198754 !important;
-    border-color: #198754 !important;
+  color: #fff !important;
+  background-color: #198754 !important;
+  border-color: #198754 !important;
 }
 
 .fc-LogOut-button {
-    color: #fff !important;
-    background-color: #899097 !important;
-    border-color: #899097 !important;
+  color: #fff !important;
+  background-color: #899097 !important;
+  border-color: #899097 !important;
+}
+
+.fc-Menu-button {
+  color: #fff !important;
+  background-color: #4095eb !important;
+  border-color: #4095eb !important;
+}
+
+.stats .stat {
+  font-size: 1.2em;
+}
+
+.navigation-menu-item.odd {
+  background-color: #e3e3e3;
+}
+.navigation-menu-item.even {
+  background-color: #dddddd;
+}
+
+.navigation-menu {
+  background-color: #efefef;
+}
+
+.navigation-menu .offcanvas-body {
+  padding: 0;
 }

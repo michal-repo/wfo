@@ -17,6 +17,10 @@
 	<script src="scripts.js"></script>
 	<link href='style.css' rel='stylesheet'>
 	<script defer>
+		function logError(message, error) {
+			console.error(message, error);
+			alert(message);
+		}
 		let calendar;
 
 		document.addEventListener('DOMContentLoaded', function () {
@@ -26,8 +30,8 @@
 				let settings = null;
 				if (r) {
 					settings = await get_settings();
-					console.log(settings);
-					console.log(generate_hidden_days(settings ? settings.days : null));
+					headerToolbarCustomButtons += " Menu";
+					headerToolbarCustomButtons += " Map";
 					headerToolbarCustomButtons += " LogOut";
 				} else {
 					headerToolbarCustomButtons += " LogIn";
@@ -48,6 +52,20 @@
 					},
 					eventOrder: "id,start,-duration,allDay,title",
 					customButtons: {
+						Menu: {
+							text: 'Menu',
+							click: function () {
+								new bootstrap.Offcanvas(document.getElementById("sidebarMenu")).toggle();
+							},
+							hint: "Show menu"
+						},
+						Map: {
+							text: 'Map',
+							click: function () {
+								show_map_today();
+							},
+							hint: "Show menu"
+						},
 						LogOut: {
 							text: 'Log out',
 							click: function () {
@@ -91,7 +109,7 @@
 				}).then(response => {
 					calendar.refetchEvents();
 				}).catch(error => {
-					console.error('There was an error switching the day:', error);
+					logError('There was an error switching the day:', error);
 				});
 			} else if (event_text.includes("Add holiday")) {
 				axios.post(`api/holiday/add`, {
@@ -99,7 +117,7 @@
 				}).then(response => {
 					calendar.refetchEvents();
 				}).catch(error => {
-					console.error('There was an error switching the day:', error);
+					logError('There was an error switching the day:', error);
 				});
 			} else if (event_text.includes("Add Sick Leave")) {
 				axios.post(`api/sickleave/add`, {
@@ -107,8 +125,14 @@
 				}).then(response => {
 					calendar.refetchEvents();
 				}).catch(error => {
-					console.error('There was an error switching the day:', error);
+					logError('There was an error switching the day:', error);
 				});
+			} else if (event_text.includes("Book Seat") || event_text.includes("Booked seat")) {
+				populate_maps_list_in_seat_selection();
+				populate_recent_seat_choices();
+				Modal = new bootstrap.Modal(document.getElementById('seatSelection'));
+				document.getElementById('seatSelectionDay').value = day;
+				Modal.toggle();
 			} else if (event_text.includes("Add Overtime")) {
 				const hours = prompt("How many hours of overtime?");
 				if (hours != null) {
@@ -118,18 +142,18 @@
 					}).then(response => {
 						calendar.refetchEvents();
 					}).catch(error => {
-						console.error('There was an error switching the day:', error);
+						logError('There was an error switching the day:', error);
 					});
 				}
 			} else if (event_text.includes("h Overtime")) {
 				const hours = confirm("Remove overtime?");
-				if (hours != null) {
+				if (hours != null && hours == true) {
 					axios.post(`api/overtime/delete`, {
 						date: day
 					}).then(response => {
 						calendar.refetchEvents();
 					}).catch(error => {
-						console.error('There was an error deleting overtime on the day:', error);
+						logError('There was an error deleting overtime on the day:', error);
 					});
 				}
 			} else {
@@ -138,7 +162,7 @@
 				}).then(response => {
 					calendar.refetchEvents();
 				}).catch(error => {
-					console.error('There was an error switching the day:', error);
+					logError('There was an error switching the day:', error);
 				});
 			}
 		}
@@ -147,7 +171,7 @@
 			axios.post(`api/log-out`).then(response => {
 				window.location.replace("/wfo");
 			}).catch(error => {
-				console.error('There was an error: ', error);
+				logError('There was an error: ', error);
 			});
 		}
 
@@ -159,81 +183,110 @@
 </head>
 
 <body>
+	<div class="offcanvas offcanvas-start navigation-menu" tabindex="-1" id="sidebarMenu"
+		aria-labelledby="sidebarMenuLabel">
+		<div class="offcanvas-header">
+			<h5 class="offcanvas-title" id="sidebarMenuLabel">Menu</h5>
+			<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+		</div>
+		<div class="offcanvas-body">
+			<ul class="nav flex-column">
+				<li class="navigation-menu-item odd">
+					<a href="#submenu" data-bs-toggle="collapse" class="nav-link">
+						Calendar settings</a>
+					<ul class="collapse nav flex-column ms-4" id="submenu" data-bs-parent="#sidebarMenu">
+						<li>
+							<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#monthTargetModal"
+								href="#">
+								Edit month target
+							</a>
+						</li>
+						<li>
+							<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#workingDaysModal"
+								href="#">
+								Edit working days
+							</a>
+						</li>
+						<li>
+							<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#yearTargetModal"
+								href="#">
+								Edit year target
+						</li>
+						</a>
+					</ul>
+				</li>
+
+				<li class="nav-item navigation-menu-item even">
+					<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#tokensCommands" href="#"
+						onclick="(function(){
+									get_tokens();
+									return true;
+								})();return true;">
+						Manage access tokens
+					</a>
+				</li>
+				<li class="nav-item navigation-menu-item odd">
+					<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#statistics" href="#"
+						onclick="(function(){
+				populate_stats_in_modal();
+				return true;
+			})();return true;">
+						Statistics
+					</a>
+				</li>
+				<li class="nav-item navigation-menu-item odd">
+					<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#maps" href="#" onclick="(function(){
+				populate_maps_list();
+				return true;
+			})();return true;">
+						Maps
+					</a>
+				</li>
+				<li class="nav-item navigation-menu-item even">
+					<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#settings" href="#"
+						onclick="(function(){
+				populate_settings_in_modal();
+				return true;
+			})();return true;">
+						<i class="bi bi-gear"></i>&nbsp;Settings
+					</a>
+				</li>
+			</ul>
+		</div>
+	</div>
 	<div id="stats" class="stats container-fluid">
 		<div class="row">
 			<div class="col-10">
-				<div class="row">
-					<div class="col">
-						<h5>Month Target - <b><span id="month-target"></span>%</b>
-							<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-								data-bs-target="#monthTargetModal">
-								<i class="bi bi-pencil-square"></i>
-							</button>
-						</h5>
-					</div>
-					<div class="col">
-						<h5>Working Days - <b id="working-days"></b>
-							<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-								data-bs-target="#workingDaysModal">
-								<i class="bi bi-pencil-square"></i>
-							</button>
-						</h5>
-					</div>
-					<div class="col">
-						<h5>Office days (actual/min.) - <b id="office-actual-min"></b></h5>
-					</div>
-					<div class="col">
-						<h5>
-							Holidays - <b id="holidays"></b>
-						</h5>
-					</div>
-					<div class="col">
-						<h5>
-							Sick leave - <b id="sickleave"></b>
-						</h5>
-					</div>
-					<div class="col">
-						<h5>
-							Overtime - <b id="overtime"></b>
-						</h5>
-					</div>
-					<div class="col">
-						<h5>
-							<span>Access tokens </span>
-							<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-								data-bs-target="#tokensCommands" onclick="(function(){
-                                    get_tokens();
-                                    return true;
-                                    })();return true;">
-								<i class="bi bi-wrench-adjustable-circle"></i>
-							</button>
-							<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-								data-bs-target="#settings" onclick="(function(){
-                                    populate_settings_in_modal();
-                                    return true;
-                                    })();return true;">
-								<i class="bi bi-gear"></i>
-							</button>
-						</h5>
-					</div>
-				</div>
+				<span class="stat">Month Target - <b><span id="month-target"></span>%</b></span>
+				&nbsp;&nbsp;
+				<span class="stat">Working Days - <b id="working-days"></b></span>
+				&nbsp;&nbsp;
+				<span class="stat">Office days (actual/min.) - <b id="office-actual-min"></b></span>
+				&nbsp;&nbsp;
+				<span class="stat">Holidays - <b id="holidays"></b></span>
+				&nbsp;&nbsp;
+				<span class="stat">Sick leave - <b id="sickleave"></b></span>
+				&nbsp;&nbsp;
+				<span class="stat">Overtime - <b id="overtime"></b></span>
+			</div>
+			<div class="col-2">
+				<span class="stat">Year Target - <b><span id="year-target"></span>%</b></span>
+			</div>
+		</div>
+		<div class="row mt-2">
+			<div class="col-10">
 				<div class="progress">
 					<div class="progress-bar" id="month-target-progressbar" role="progressbar"></div>
 				</div>
 			</div>
 			<div class="col-2">
-				<h5>Year Target - <b><span id="year-target"></span>%</b>
-					<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-						data-bs-target="#yearTargetModal">
-						<i class="bi bi-pencil-square"></i>
-					</button>
-				</h5>
 				<div class="progress">
 					<div class="progress-bar" id="year-target-progressbar" role="progressbar"></div>
 				</div>
 			</div>
 		</div>
 	</div>
+
 
 
 	<div id="wfo-calendar" class="wfo-calendar">
@@ -376,7 +429,6 @@
 							<input type="text" readonly class="form-control" id="token-display"
 								placeholder="Your new token will appear here...">
 						</div>
-
 					</div>
 					<hr>
 					<div class="mb-3">
@@ -460,6 +512,86 @@
 		</div>
 	</div>
 
+
+	<div class="modal fade modal-xl" id="statistics" tabindex="-1" aria-labelledby="statisticsLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="statisticsLabel">Statistics for <span id="stats-title"></span></h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+
+					<p class="stat">Month Target - <b><span id="stats-month-target"></span>%</b></p>
+
+					<p class="stat">Working Days - <b id="stats-working-days"></b></p>
+
+					<p class="stat">Office days (actual/min.) - <b id="stats-office-actual-min"></b></p>
+
+					<p class="stat">Holidays - <b id="stats-holidays"></b></p>
+
+					<p class="stat">Sick leave - <b id="stats-sickleave"></b></p>
+
+					<p class="stat">Overtime - <b id="stats-overtime"></b></p>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade modal-xl" id="maps" tabindex="-1" aria-labelledby="mapsLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="mapsLabel">Maps</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<input type="file" class="form-control" id="map-file" required accept=".png">
+					<input type="text" class="form-control mt-2" id="map-name" required placeholder="Enter map name">
+					<input type="text" class="form-control mt-2" id="map-imageBoundsX" required
+						placeholder="Enter image bounds X">
+					<input type="text" class="form-control mt-2" id="map-imageBoundsY" required
+						placeholder="Enter image bounds Y">
+					<button type="button" class="btn btn-primary mt-2" onclick="upload_map()">Upload Map</button>
+					<hr>
+					<div id="maps-list" class="mt-3"></div>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade modal-xl" id="seatSelection" tabindex="-1" aria-labelledby="seatSelectionLabel"
+		aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="seatSelectionLabel">Seat Selection</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<input type="text" class="form-control mt-2" id="seatSelectionSeatName" required placeholder="Enter seat name">
+					<div id="recent-choices"></div>
+					<select class="form-select mt-2" id="seatSelectionMapSelect" required>
+						<option value="" disabled selected>Select map</option>
+					</select>
+					<input type="hidden" class="form-control mt-2" id="seatSelectionDay">
+					<button type="button" class="btn btn-primary mt-2" onclick="book_seat()">Book Seat</button>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
 
 
 
