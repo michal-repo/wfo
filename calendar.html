@@ -17,6 +17,10 @@
 	<script src="scripts.js"></script>
 	<link href='style.css' rel='stylesheet'>
 	<script defer>
+		function logError(message, error) {
+			console.error(message, error);
+			alert(message);
+		}
 		let calendar;
 
 		document.addEventListener('DOMContentLoaded', function () {
@@ -27,6 +31,7 @@
 				if (r) {
 					settings = await get_settings();
 					headerToolbarCustomButtons += " Menu";
+					headerToolbarCustomButtons += " Map";
 					headerToolbarCustomButtons += " LogOut";
 				} else {
 					headerToolbarCustomButtons += " LogIn";
@@ -51,6 +56,13 @@
 							text: 'Menu',
 							click: function () {
 								new bootstrap.Offcanvas(document.getElementById("sidebarMenu")).toggle();
+							},
+							hint: "Show menu"
+						},
+						Map: {
+							text: 'Map',
+							click: function () {
+								show_map_today();
 							},
 							hint: "Show menu"
 						},
@@ -97,7 +109,7 @@
 				}).then(response => {
 					calendar.refetchEvents();
 				}).catch(error => {
-					console.error('There was an error switching the day:', error);
+					logError('There was an error switching the day:', error);
 				});
 			} else if (event_text.includes("Add holiday")) {
 				axios.post(`api/holiday/add`, {
@@ -105,7 +117,7 @@
 				}).then(response => {
 					calendar.refetchEvents();
 				}).catch(error => {
-					console.error('There was an error switching the day:', error);
+					logError('There was an error switching the day:', error);
 				});
 			} else if (event_text.includes("Add Sick Leave")) {
 				axios.post(`api/sickleave/add`, {
@@ -113,8 +125,14 @@
 				}).then(response => {
 					calendar.refetchEvents();
 				}).catch(error => {
-					console.error('There was an error switching the day:', error);
+					logError('There was an error switching the day:', error);
 				});
+			} else if (event_text.includes("Book Seat") || event_text.includes("Booked seat")) {
+				populate_maps_list_in_seat_selection();
+				populate_recent_seat_choices();
+				Modal = new bootstrap.Modal(document.getElementById('seatSelection'));
+				document.getElementById('seatSelectionDay').value = day;
+				Modal.toggle();
 			} else if (event_text.includes("Add Overtime")) {
 				const hours = prompt("How many hours of overtime?");
 				if (hours != null) {
@@ -124,7 +142,7 @@
 					}).then(response => {
 						calendar.refetchEvents();
 					}).catch(error => {
-						console.error('There was an error switching the day:', error);
+						logError('There was an error switching the day:', error);
 					});
 				}
 			} else if (event_text.includes("h Overtime")) {
@@ -135,7 +153,7 @@
 					}).then(response => {
 						calendar.refetchEvents();
 					}).catch(error => {
-						console.error('There was an error deleting overtime on the day:', error);
+						logError('There was an error deleting overtime on the day:', error);
 					});
 				}
 			} else {
@@ -144,7 +162,7 @@
 				}).then(response => {
 					calendar.refetchEvents();
 				}).catch(error => {
-					console.error('There was an error switching the day:', error);
+					logError('There was an error switching the day:', error);
 				});
 			}
 		}
@@ -153,7 +171,7 @@
 			axios.post(`api/log-out`).then(response => {
 				window.location.replace("/wfo");
 			}).catch(error => {
-				console.error('There was an error: ', error);
+				logError('There was an error: ', error);
 			});
 		}
 
@@ -165,7 +183,8 @@
 </head>
 
 <body>
-	<div class="offcanvas offcanvas-start navigation-menu" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
+	<div class="offcanvas offcanvas-start navigation-menu" tabindex="-1" id="sidebarMenu"
+		aria-labelledby="sidebarMenuLabel">
 		<div class="offcanvas-header">
 			<h5 class="offcanvas-title" id="sidebarMenuLabel">Menu</h5>
 			<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -176,7 +195,7 @@
 					<a href="#submenu" data-bs-toggle="collapse" class="nav-link">
 						Calendar settings</a>
 					<ul class="collapse nav flex-column ms-4" id="submenu" data-bs-parent="#sidebarMenu">
-						<li >
+						<li>
 							<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#monthTargetModal"
 								href="#">
 								Edit month target
@@ -213,6 +232,14 @@
 				return true;
 			})();return true;">
 						Statistics
+					</a>
+				</li>
+				<li class="nav-item navigation-menu-item odd">
+					<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#maps" href="#" onclick="(function(){
+				populate_maps_list();
+				return true;
+			})();return true;">
+						Maps
 					</a>
 				</li>
 				<li class="nav-item navigation-menu-item even">
@@ -507,13 +534,65 @@
 
 					<p class="stat">Overtime - <b id="stats-overtime"></b></p>
 				</div>
-			</div>
-			<div class="modal-footer">
-				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+				</div>
 			</div>
 		</div>
 	</div>
+
+	<div class="modal fade modal-xl" id="maps" tabindex="-1" aria-labelledby="mapsLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="mapsLabel">Maps</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<input type="file" class="form-control" id="map-file" required accept=".png">
+					<input type="text" class="form-control mt-2" id="map-name" required placeholder="Enter map name">
+					<input type="text" class="form-control mt-2" id="map-imageBoundsX" required
+						placeholder="Enter image bounds X">
+					<input type="text" class="form-control mt-2" id="map-imageBoundsY" required
+						placeholder="Enter image bounds Y">
+					<button type="button" class="btn btn-primary mt-2" onclick="upload_map()">Upload Map</button>
+					<hr>
+					<div id="maps-list" class="mt-3"></div>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
 	</div>
+
+	<div class="modal fade modal-xl" id="seatSelection" tabindex="-1" aria-labelledby="seatSelectionLabel"
+		aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="seatSelectionLabel">Seat Selection</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<input type="text" class="form-control mt-2" id="seatSelectionSeatName" required placeholder="Enter seat name">
+					<div id="recent-choices"></div>
+					<select class="form-select mt-2" id="seatSelectionMapSelect" required>
+						<option value="" disabled selected>Select map</option>
+					</select>
+					<input type="hidden" class="form-control mt-2" id="seatSelectionDay">
+					<button type="button" class="btn btn-primary mt-2" onclick="book_seat()">Book Seat</button>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
 
 
 </body>

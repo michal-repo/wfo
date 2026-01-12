@@ -271,3 +271,217 @@ async function populate_stats_in_modal() {
         return null;
     }
 }
+
+async function save_map(map, name, imageBoundsX, imageBoundsY) {
+    try {
+        const response = await axios.post('api/map', { map: map, name: name, imageBoundsX: imageBoundsX, imageBoundsY: imageBoundsY });
+        return response.data;
+    } catch (error) {
+        console.error("Error saving map:", error);
+        return null;
+    }
+}
+
+async function upload_map() {
+    const map = document.getElementById("map-file").files[0];
+    const name = document.getElementById("map-name").value;
+    const imageBoundsX = parseFloat(document.getElementById("map-imageBoundsX").value);
+    const imageBoundsY = parseFloat(document.getElementById("map-imageBoundsY").value);
+
+    if (!map) {
+        alert("Please select a file.");
+        return;
+    }
+
+    if (map.type !== "image/png") {
+        alert("Please select a PNG file.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function (event) {
+        const base64String = event.target.result.split(',')[1];
+        const result = await save_map(base64String, name, imageBoundsX, imageBoundsY);
+        if (result) {
+            alert("Map uploaded successfully!");
+        } else {
+            alert("Error uploading map.");
+        }
+    };
+    reader.readAsDataURL(map);
+
+    populate_maps_list();
+}
+
+async function get_maps() {
+    try {
+        const response = await axios.get('api/maps');
+        return response.data.data;
+    } catch (error) {
+        console.error("Error getting maps:", error);
+        return null;
+    }
+}
+
+async function get_recent_seats() {
+    try {
+        const response = await axios.get('api/seats/recent');
+        return response.data.data;
+    } catch (error) {
+        console.error("Error getting maps:", error);
+        return null;
+    }
+}
+
+async function populate_maps_list() {
+    try {
+        const maps = await get_maps();
+        const mapsListEl = document.getElementById('maps-list');
+        mapsListEl.innerHTML = '';
+        maps.forEach(map => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.innerHTML = `
+                <span>${map.name}</span>
+                <input type="file" id="seats-file-${map.id}" accept=".json" />
+                <button class="btn btn-primary btn-sm" onclick="confirm('Are you sure you want to add seats from the selected file? Existing seats will be overwritten!') && bulk_create_seats(${map.id})">Add seats</button>
+                <button class="btn btn-primary btn-sm" onclick="show_map(${map.id})">Show</button>
+            `;
+            mapsListEl.appendChild(li);
+        });
+    } catch (error) {
+        console.error("Error populating maps list:", error);
+    }
+}
+
+function show_map(map_id) {
+    window.open(`map.html?id=${map_id}`, '_blank');
+}
+
+async function show_map_today() {
+    const today = new Date();
+    try {
+        const response = await axios.get(`api/seat/booked?date=${today.toISOString().split('T')[0]}`);
+        results = response.data.data;
+        if (results.result) {
+            const map_id = results.result.map_id;
+            const seat = results.result.id;
+
+            window.open(`map.html?id=${map_id}&seat_id=${seat}`, '_blank');
+        } else {
+            alert("No seat booked for today.");
+        }
+    } catch (error) {
+        console.error(`Error getting seats for map ${map_id}:`, error);
+        return null;
+    }
+}
+
+async function get_map_seats(map_id) {
+    try {
+        const response = await axios.get(`api/map/${map_id}/seats`);
+        return response.data.data;
+    } catch (error) {
+        console.error(`Error getting seats for map ${map_id}:`, error);
+        return null;
+    }
+}
+
+async function create_seat(map_id, name, description, bookable, x, y) {
+    try {
+        const response = await axios.post('api/seat', {
+            map_id: map_id,
+            name: name,
+            description: description,
+            bookable: bookable,
+            x: x,
+            y: y
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error creating seat:", error);
+        return null;
+    }
+}
+
+async function bulk_create_seats(map_id) {
+    try {
+        const seats_file_input = document.getElementById(`seats-file-${map_id}`);
+        if (!seats_file_input || seats_file_input.files.length === 0) {
+            alert("Please select a seats JSON file.");
+            return null;
+        }
+
+        const file = seats_file_input.files[0];
+        const fileContent = await file.text();
+        const seats_data = JSON.parse(fileContent);
+        const response = await axios.post(`api/seats/bulk/${map_id}`, seats_data);
+        if (response.data) {
+            alert("Seats added successfully!");
+        } else {
+            alert("Error adding seats.");
+        }
+    } catch (error) {
+        console.error("Error bulk creating seats:", error);
+        return null;
+    }
+}
+
+async function book_seat() {
+    const seat_name = document.getElementById('seatSelectionSeatName').value;
+    const day = document.getElementById('seatSelectionDay').value;
+    const map_id = document.getElementById('seatSelectionMapSelect').value;
+    if (seat_name != null) {
+        axios.post(`api/seat/book-by-name`, {
+            reservation_date: day,
+            seat_name: seat_name,
+            map_id: map_id
+        }).then(response => {
+            Modal.toggle();
+            calendar.refetchEvents();
+        }).catch(error => {
+            logError('There was an error when booking a seat:', error);
+        });
+    } else {
+        alert("Please enter a seat name.");
+    }
+}
+
+async function populate_maps_list_in_seat_selection() {
+    try {
+        const maps = await get_maps();
+        const seatSelectionSeatNameEl = document.getElementById('seatSelectionSeatName');
+        seatSelectionSeatNameEl.value = "";
+        const mapsListEl = document.getElementById('seatSelectionMapSelect');
+        maps.forEach(map => {
+            const option = document.createElement('option');
+            option.value = map.id;
+            option.text = map.name;
+            option.selected = true;
+            mapsListEl.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error populating maps list:", error);
+    }
+}
+
+async function populate_recent_seat_choices() {
+    try {
+        const recentSeats = await get_recent_seats();
+        const recentChoicesEl = document.getElementById('recent-choices');
+        recentChoicesEl.innerHTML = '<label>Recent Seats:</label><br>';
+        recentSeats.result.forEach(seat => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn btn-secondary btn-sm m-1';
+            button.innerText = seat.name;
+            button.onclick = () => {
+                document.getElementById('seatSelectionSeatName').value = seat.name;
+            };
+            recentChoicesEl.appendChild(button);
+        });
+
+    } catch (error) {
+        console.error("Error populating recent seat choices:", error);
+    }
+} 

@@ -484,6 +484,168 @@ $router->post('/save-settings', function () {
     }
 });
 
+$router->post('/map', function () {
+    try {
+        log_in_check(true);
+        $j = json_decode(file_get_contents("php://input"), true);
+        if (is_null($j) || $j === false || !isset($j['map'])) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON with map data']]);
+            die();
+        }
+        $api = new API();
+        $result = $api->save_map($j['map'], $j['name'], $j['imageBoundsX'], $j['imageBoundsY']);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->get('/maps', function () {
+    try {
+        log_in_check(true);
+        $api = new API();
+        $maps = $api->get_maps();
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $maps]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->get('/map/(\d+)/seats', function ($map_id) {
+    try {
+        log_in_check(true);
+        $api = new API();
+        $seats = $api->get_map_seats($map_id);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $seats]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->get('/map/(\d+)', function ($map_id) {
+    try {
+        log_in_check(true);
+        $api = new API();
+        $map = $api->get_map($map_id);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $map]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/seat', function () {
+    try {
+        log_in_check(true);
+        $j = json_decode(file_get_contents("php://input"), true);
+        if (is_null($j) || $j === false) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+            die();
+        }
+        $api = new API();
+        $result = $api->create_seat($j['map_id'], $j['name'], $j['description'], $j['bookable'], $j['x'], $j['y']);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/seats/bulk/(\d+)', function ($map_id) {
+    try {
+        log_in_check(true);
+        $j = json_decode(file_get_contents("php://input"), true);
+        if (is_null($j) || $j === false) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+            die();
+        }
+        $api = new API();
+        $result = $api->bulk_create_seats($map_id, $j);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/seat/book-by-name', function () {
+    try {
+        log_in_check(true);
+        $j = json_decode(file_get_contents("php://input"), true);
+        if (is_null($j) || $j === false || !isset($j['seat_name']) || !isset($j['reservation_date']) || !isset($j['map_id'])) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON with seat_name and reservation_date']]);
+            die();
+        }
+        $day = date('Y-m-d', strtotime($j['reservation_date']));
+        $api = new API();
+        $result = $api->book_seat_by_name($j['seat_name'], $day, $j['map_id']);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/seat/book', function () {
+    try {
+        log_in_check(true);
+        $j = json_decode(file_get_contents("php://input"), true);
+        if (is_null($j) || $j === false || !isset($j['seat_id']) || !isset($j['reservation_date'])) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON with seat_id and reservation_date']]);
+            die();
+        }
+        $api = new API();
+        $result = $api->book_seat($j['seat_id'], $j['reservation_date']);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/seat/unbook', function () {
+    try {
+        log_in_check(true);
+        $j = json_decode(file_get_contents("php://input"), true);
+        if (is_null($j) || $j === false || !isset($j['seat_id']) || !isset($j['reservation_date'])) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON with seat_id and reservation_date']]);
+            die();
+        }
+        $api = new API();
+        $result = $api->unbook_seat($j['seat_id'], $j['reservation_date']);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->get('/seat/booked', function () {
+    try {
+        log_in_check(true);
+        $day = date('Y-m-d', strtotime(checkGetParam('date', NULL)));
+
+        $api = new API();
+        $result = $api->get_booked_seats($day);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->get('/seats/recent', function () {
+    try {
+        log_in_check(true);
+        $api = new API();
+        $result = $api->get_recent_seats();
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+
+
 function checkGetParam($param, $default)
 {
     if (isset($_GET[$param])) {
