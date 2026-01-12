@@ -1063,7 +1063,7 @@ class API
 
     public function get_recent_seats()
     {
-        $query = "SELECT DISTINCT s1.name FROM seats s1 JOIN user_seats us1 ON s1.id = us1.seat_id WHERE us1.user_id = :user_id";
+        $query = "SELECT DISTINCT s1.name FROM seats s1 JOIN user_seats us1 ON s1.id = us1.seat_id WHERE us1.user_id = :user_id limit 10";
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->execute();
