@@ -66,7 +66,7 @@ async function get_tokens() {
     response = await axios.get(`api/get-tokens`).then(response => {
         response.data.data.forEach((el) => {
             if (el !== undefined) {
-                document.getElementById("existing-tokens-list").innerHTML += "<div> ID: " + el.id + ", Name: " + el.token_name + "<button onclick=\"deleteToken(" + el.id + ")\">Delete</button></div>"; // Append to existing list
+                document.getElementById("existing-tokens-list").innerHTML += "<div> ID: " + el.id + ", Name: " + el.token_name + "&nbsp;<button class=\"btn btn-danger btn-sm\" onclick=\"deleteToken(" + el.id + ")\">Delete</button></div>"; // Append to existing list
             }
         })
         return null;
@@ -247,3 +247,27 @@ function update_stats(year, month) {
     });
 }
 
+
+async function populate_stats_in_modal() {
+    try {
+        const stats = ["month-target",
+            "working-days",
+            "office-actual-min",
+            "holidays",
+            "sickleave",
+            "overtime",
+        ];
+        for (const stat of stats) {
+            const el = document.getElementById(`${stat}`);
+            const targetEl = document.getElementById(`stats-${stat}`);
+            if (el && targetEl) {
+                targetEl.innerText = el.innerText;
+            }
+        }
+        const statsTitleEl = document.getElementById('stats-title');
+        statsTitleEl.innerText = calendar.getCurrentData().viewTitle;
+        return true;
+    } catch (error) {
+        return null;
+    }
+}

@@ -26,8 +26,7 @@
 				let settings = null;
 				if (r) {
 					settings = await get_settings();
-					console.log(settings);
-					console.log(generate_hidden_days(settings ? settings.days : null));
+					headerToolbarCustomButtons += " Menu";
 					headerToolbarCustomButtons += " LogOut";
 				} else {
 					headerToolbarCustomButtons += " LogIn";
@@ -48,6 +47,13 @@
 					},
 					eventOrder: "id,start,-duration,allDay,title",
 					customButtons: {
+						Menu: {
+							text: 'Menu',
+							click: function () {
+								new bootstrap.Offcanvas(document.getElementById("sidebarMenu")).toggle();
+							},
+							hint: "Show menu"
+						},
 						LogOut: {
 							text: 'Log out',
 							click: function () {
@@ -159,81 +165,101 @@
 </head>
 
 <body>
+	<div class="offcanvas offcanvas-start navigation-menu" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
+		<div class="offcanvas-header">
+			<h5 class="offcanvas-title" id="sidebarMenuLabel">Menu</h5>
+			<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+		</div>
+		<div class="offcanvas-body">
+			<ul class="nav flex-column">
+				<li class="navigation-menu-item odd">
+					<a href="#submenu" data-bs-toggle="collapse" class="nav-link">
+						Calendar settings</a>
+					<ul class="collapse nav flex-column ms-4" id="submenu" data-bs-parent="#sidebarMenu">
+						<li >
+							<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#monthTargetModal"
+								href="#">
+								Edit month target
+							</a>
+						</li>
+						<li>
+							<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#workingDaysModal"
+								href="#">
+								Edit working days
+							</a>
+						</li>
+						<li>
+							<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#yearTargetModal"
+								href="#">
+								Edit year target
+						</li>
+						</a>
+					</ul>
+				</li>
+
+				<li class="nav-item navigation-menu-item even">
+					<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#tokensCommands" href="#"
+						onclick="(function(){
+									get_tokens();
+									return true;
+								})();return true;">
+						Manage access tokens
+					</a>
+				</li>
+				<li class="nav-item navigation-menu-item odd">
+					<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#statistics" href="#"
+						onclick="(function(){
+				populate_stats_in_modal();
+				return true;
+			})();return true;">
+						Statistics
+					</a>
+				</li>
+				<li class="nav-item navigation-menu-item even">
+					<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#settings" href="#"
+						onclick="(function(){
+				populate_settings_in_modal();
+				return true;
+			})();return true;">
+						<i class="bi bi-gear"></i>&nbsp;Settings
+					</a>
+				</li>
+			</ul>
+		</div>
+	</div>
 	<div id="stats" class="stats container-fluid">
 		<div class="row">
 			<div class="col-10">
-				<div class="row">
-					<div class="col">
-						<h5>Month Target - <b><span id="month-target"></span>%</b>
-							<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-								data-bs-target="#monthTargetModal">
-								<i class="bi bi-pencil-square"></i>
-							</button>
-						</h5>
-					</div>
-					<div class="col">
-						<h5>Working Days - <b id="working-days"></b>
-							<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-								data-bs-target="#workingDaysModal">
-								<i class="bi bi-pencil-square"></i>
-							</button>
-						</h5>
-					</div>
-					<div class="col">
-						<h5>Office days (actual/min.) - <b id="office-actual-min"></b></h5>
-					</div>
-					<div class="col">
-						<h5>
-							Holidays - <b id="holidays"></b>
-						</h5>
-					</div>
-					<div class="col">
-						<h5>
-							Sick leave - <b id="sickleave"></b>
-						</h5>
-					</div>
-					<div class="col">
-						<h5>
-							Overtime - <b id="overtime"></b>
-						</h5>
-					</div>
-					<div class="col">
-						<h5>
-							<span>Access tokens </span>
-							<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-								data-bs-target="#tokensCommands" onclick="(function(){
-                                    get_tokens();
-                                    return true;
-                                    })();return true;">
-								<i class="bi bi-wrench-adjustable-circle"></i>
-							</button>
-							<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-								data-bs-target="#settings" onclick="(function(){
-                                    populate_settings_in_modal();
-                                    return true;
-                                    })();return true;">
-								<i class="bi bi-gear"></i>
-							</button>
-						</h5>
-					</div>
-				</div>
+				<span class="stat">Month Target - <b><span id="month-target"></span>%</b></span>
+				&nbsp;&nbsp;
+				<span class="stat">Working Days - <b id="working-days"></b></span>
+				&nbsp;&nbsp;
+				<span class="stat">Office days (actual/min.) - <b id="office-actual-min"></b></span>
+				&nbsp;&nbsp;
+				<span class="stat">Holidays - <b id="holidays"></b></span>
+				&nbsp;&nbsp;
+				<span class="stat">Sick leave - <b id="sickleave"></b></span>
+				&nbsp;&nbsp;
+				<span class="stat">Overtime - <b id="overtime"></b></span>
+			</div>
+			<div class="col-2">
+				<span class="stat">Year Target - <b><span id="year-target"></span>%</b></span>
+			</div>
+		</div>
+		<div class="row mt-2">
+			<div class="col-10">
 				<div class="progress">
 					<div class="progress-bar" id="month-target-progressbar" role="progressbar"></div>
 				</div>
 			</div>
 			<div class="col-2">
-				<h5>Year Target - <b><span id="year-target"></span>%</b>
-					<button type="button" class="btn btn-sm btn-info ms-2" data-bs-toggle="modal"
-						data-bs-target="#yearTargetModal">
-						<i class="bi bi-pencil-square"></i>
-					</button>
-				</h5>
 				<div class="progress">
 					<div class="progress-bar" id="year-target-progressbar" role="progressbar"></div>
 				</div>
 			</div>
 		</div>
 	</div>
+
 
 
 	<div id="wfo-calendar" class="wfo-calendar">
@@ -376,7 +402,6 @@
 							<input type="text" readonly class="form-control" id="token-display"
 								placeholder="Your new token will appear here...">
 						</div>
-
 					</div>
 					<hr>
 					<div class="mb-3">
@@ -461,6 +486,34 @@
 	</div>
 
 
+	<div class="modal fade modal-xl" id="statistics" tabindex="-1" aria-labelledby="statisticsLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="statisticsLabel">Statistics for <span id="stats-title"></span></h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+
+					<p class="stat">Month Target - <b><span id="stats-month-target"></span>%</b></p>
+
+					<p class="stat">Working Days - <b id="stats-working-days"></b></p>
+
+					<p class="stat">Office days (actual/min.) - <b id="stats-office-actual-min"></b></p>
+
+					<p class="stat">Holidays - <b id="stats-holidays"></b></p>
+
+					<p class="stat">Sick leave - <b id="stats-sickleave"></b></p>
+
+					<p class="stat">Overtime - <b id="stats-overtime"></b></p>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+	</div>
 
 
 </body>
