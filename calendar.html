@@ -123,7 +123,7 @@
 				}
 			} else if (event_text.includes("h Overtime")) {
 				const hours = confirm("Remove overtime?");
-				if (hours != null) {
+				if (hours != null && hours == true) {
 					axios.post(`api/overtime/delete`, {
 						date: day
 					}).then(response => {
