@@ -359,6 +359,13 @@ function show_map(map_id) {
 }
 
 async function show_map_today() {
+            const today_el = document.getElementById("today-seat");
+            const map_id = today_el.dataset.map_id;
+            const seat = today_el.dataset.seat;
+            window.open(`map.html?id=${map_id}&seat_id=${seat}`, '_blank');
+}
+
+async function get_map_today() {
     const today = new Date();
     try {
         const response = await axios.get(`api/seat/booked?date=${today.toISOString().split('T')[0]}`);
@@ -367,7 +374,11 @@ async function show_map_today() {
             const map_id = results.result.map_id;
             const seat = results.result.id;
 
-            window.open(`map.html?id=${map_id}&seat_id=${seat}`, '_blank');
+            const today_el = document.getElementById("today-seat");
+            today_el.dataset.map_id = map_id; 
+            today_el.dataset.seat = seat;
+
+
         } else {
             alert("No seat booked for today.");
         }
@@ -376,6 +387,10 @@ async function show_map_today() {
         return null;
     }
 }
+
+(async () => {
+  await get_map_today();
+})();
 
 async function get_map_seats(map_id) {
     try {
