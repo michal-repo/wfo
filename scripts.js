@@ -362,27 +362,33 @@ async function show_map_today() {
             const today_el = document.getElementById("today-seat");
             const map_id = today_el.dataset.map_id;
             const seat = today_el.dataset.seat;
-            window.open(`map.html?id=${map_id}&seat_id=${seat}`, '_blank');
+
+            if (seat == undefined){
+                alert("No seat booked for today.");
+            } else {
+                window.open(`map.html?id=${map_id}&seat_id=${seat}`, '_blank');
+            }
 }
 
 async function get_map_today() {
     const today = new Date();
+    const today_el = document.getElementById("today-seat");
     try {
         const response = await axios.get(`api/seat/booked?date=${today.toISOString().split('T')[0]}`);
         results = response.data.data;
+
         if (results.result) {
             const map_id = results.result.map_id;
             const seat = results.result.id;
-
-            const today_el = document.getElementById("today-seat");
             today_el.dataset.map_id = map_id; 
             today_el.dataset.seat = seat;
-
-
         } else {
-            alert("No seat booked for today.");
+            delete today_el.dataset.map_id;
+            delete today_el.dataset.seat;  
         }
     } catch (error) {
+        delete today_el.dataset.map_id;
+        delete today_el.dataset.seat;  
         console.error(`Error getting seats for map ${map_id}:`, error);
         return null;
     }
@@ -454,6 +460,7 @@ async function book_seat() {
         }).then(response => {
             Modal.toggle();
             calendar.refetchEvents();
+            get_map_today();
         }).catch(error => {
             logError('There was an error when booking a seat:', error);
         });
