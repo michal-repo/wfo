@@ -394,9 +394,14 @@ async function get_map_today() {
     }
 }
 
-(async () => {
-  await get_map_today();
-})();
+window.addEventListener(
+"load",
+  function () {
+    (async () => {
+      await get_map_today();
+    })();
+  }
+);
 
 async function get_map_seats(map_id) {
     try {
