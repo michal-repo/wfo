@@ -209,6 +209,7 @@ class API
                 $res[] = $this->generate_sickleave_event($dt);
                 $res[] = $this->generate_overtime_event($dt);
                 $res[] = $this->generate_book_seat_event($dt);
+                $res[] = $this->generate_book_parking_spot_event($dt);
             } else {
                 if (in_array($dt->format("N"), [1, 2, 3, 4, 5])) {
                     $res[] = [
@@ -224,6 +225,7 @@ class API
                     $res[] = $this->generate_sickleave_event($dt);
                     $res[] = $this->generate_overtime_event($dt);
                     $res[] = $this->generate_book_seat_event($dt);
+                    $res[] = $this->generate_book_parking_spot_event($dt);
                 }
             }
             $overtime_key = array_search($dt->format("Y-m-d"), $overtime_days);
@@ -294,6 +296,30 @@ class API
         }
         return [
             "title" => "💺 Book Seat",
+            "start" => $dt->format("Y-m-d"),
+            "end" => $dt->format("Y-m-d"),
+            "color" => $_ENV['add_holiday_color'],
+            "textColor" => $_ENV['add_holiday_text_color'],
+            "cursor" => "pointer",
+            "id" => 11
+        ];
+    }
+
+    private function generate_book_parking_spot_event($dt)
+    {
+        $b = $this->get_booked_parking_spot($dt->format("Y-m-d"));
+        if ($b && $b > 0) {
+            return [
+                "title" => "🚗 Parking Spot: " . $b['name'],
+                "start" => $dt->format("Y-m-d"),
+                "end" => $dt->format("Y-m-d"),
+                "color" => "#82cdff",
+                "cursor" => "pointer",
+                "id" => 12
+            ];
+        }
+        return [
+            "title" => "🚗 Book Parking Spot",
             "start" => $dt->format("Y-m-d"),
             "end" => $dt->format("Y-m-d"),
             "color" => $_ENV['add_holiday_color'],
@@ -861,21 +887,40 @@ class API
         }
     }
 
-    public function save_map($map, $name, $imageBoundsX, $imageBoundsY)
+    public function map_allowed_types()
     {
-        $query = "INSERT INTO maps (map, user_id, name, imageBoundsY, imageBoundsX) VALUES (:map, :user_id, :name, :imageBoundsY, :imageBoundsX)";
+        return ['office', 'parking'];
+    }
+
+    public function save_map($map, $name, $imageBoundsX, $imageBoundsY, $type)
+    {
+        $query = "INSERT INTO maps (map, user_id, name, type, imageBoundsY, imageBoundsX) VALUES (:map, :user_id, :name, :type, :imageBoundsY, :imageBoundsX)";
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':map', $map, \PDO::PARAM_LOB);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->bindValue(':name', $name, \PDO::PARAM_STR);
+        $stmt->bindValue(':type', $type, \PDO::PARAM_STR);
         $stmt->bindValue(':imageBoundsY', $imageBoundsY, \PDO::PARAM_STR);
         $stmt->bindValue(':imageBoundsX', $imageBoundsX, \PDO::PARAM_STR);
         return $stmt->execute();
     }
 
-    public function get_maps()
+    public function delete_map($map_id)
     {
-        $query = "SELECT id, map, name FROM maps WHERE user_id = :user_id";
+        $query = "DELETE FROM maps WHERE id = :map_id AND user_id = :user_id";
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':map_id', $map_id, \PDO::PARAM_INT);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
+    public function get_maps($info_only = false)
+    {
+        if ($info_only) {
+            $query = "SELECT id, name, type FROM maps WHERE user_id = :user_id";
+        } else {
+            $query = "SELECT id, map, name, type FROM maps WHERE user_id = :user_id";
+        }
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->execute();
@@ -884,7 +929,7 @@ class API
 
     public function get_map($id)
     {
-        $query = "SELECT id, map, name, imageBoundsX, imageBoundsY FROM maps WHERE user_id = :user_id AND id = :id";
+        $query = "SELECT id, map, name, type, imageBoundsX, imageBoundsY FROM maps WHERE user_id = :user_id AND id = :id";
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
@@ -998,10 +1043,11 @@ class API
     {
         try {
             if (empty($seat_name)) {
-                $query_delete = "DELETE FROM user_seats WHERE user_id = :user_id AND reservation_date = :reservation_date";
+                $query_delete = "DELETE FROM user_seats WHERE user_id = :user_id AND reservation_date = :reservation_date AND map_id = :map_id";
                 $stmt_delete = $this->db->dbh->prepare($query_delete);
                 $stmt_delete->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
                 $stmt_delete->bindValue(':reservation_date', $reservation_date, \PDO::PARAM_STR);
+                $stmt_delete->bindValue(':map_id', $map_id, \PDO::PARAM_INT);
                 $stmt_delete->execute();
                 return true;
             } else {
@@ -1013,17 +1059,19 @@ class API
                     throw new \Exception("Seat does not belong to the specified map!", 1);
                 }
 
-                $query_delete = "DELETE FROM user_seats WHERE user_id = :user_id AND reservation_date = :reservation_date";
+                $query_delete = "DELETE FROM user_seats WHERE user_id = :user_id AND reservation_date = :reservation_date AND map_id = :map_id";
                 $stmt_delete = $this->db->dbh->prepare($query_delete);
                 $stmt_delete->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
                 $stmt_delete->bindValue(':reservation_date', $reservation_date, \PDO::PARAM_STR);
+                $stmt_delete->bindValue(':map_id', $map_id, \PDO::PARAM_INT);
                 $stmt_delete->execute();
 
-                $query = "INSERT INTO user_seats (seat_id, user_id, reservation_date) VALUES (:seat_id, :user_id, :reservation_date)";
+                $query = "INSERT INTO user_seats (seat_id, user_id, reservation_date, map_id) VALUES (:seat_id, :user_id, :reservation_date, :map_id)";
                 $stmt = $this->db->dbh->prepare($query);
                 $stmt->bindValue(':seat_id', $user_map_seat['id'], \PDO::PARAM_INT);
                 $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
                 $stmt->bindValue(':reservation_date', $reservation_date, \PDO::PARAM_STR);
+                $stmt->bindValue(':map_id', $map_id, \PDO::PARAM_INT);
                 return $stmt->execute();
             }
         } catch (\Exception $e) {
@@ -1052,7 +1100,17 @@ class API
 
     public function get_booked_seats($reservation_date)
     {
-        $query = "SELECT s1.*, us1.user_id FROM user_seats us1 JOIN seats s1 ON us1.seat_id = s1.id JOIN maps m1 ON s1.map_id = m1.id WHERE us1.reservation_date = :reservation_date AND m1.user_id = :user_id";
+        $query = "SELECT s1.*, us1.user_id FROM user_seats us1 JOIN seats s1 ON us1.seat_id = s1.id JOIN maps m1 ON s1.map_id = m1.id WHERE us1.reservation_date = :reservation_date AND m1.user_id = :user_id AND m1.type = 'office'";
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':reservation_date', $reservation_date, \PDO::PARAM_STR);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    public function get_booked_parking_spot($reservation_date)
+    {
+        $query = "SELECT s1.*, us1.user_id FROM user_seats us1 JOIN seats s1 ON us1.seat_id = s1.id JOIN maps m1 ON s1.map_id = m1.id WHERE us1.reservation_date = :reservation_date AND m1.user_id = :user_id AND m1.type = 'parking'";
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':reservation_date', $reservation_date, \PDO::PARAM_STR);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
@@ -1061,11 +1119,18 @@ class API
     }
 
 
-    public function get_recent_seats()
+    public function get_recent_seats($map_type = null)
     {
-        $query = "SELECT DISTINCT s1.name FROM seats s1 JOIN user_seats us1 ON s1.id = us1.seat_id WHERE us1.user_id = :user_id limit 10";
+        $query = "SELECT DISTINCT s1.name FROM seats s1 JOIN user_seats us1 ON s1.id = us1.seat_id JOIN maps m1 ON s1.map_id = m1.id WHERE us1.user_id = :user_id ";
+        if (!is_null($map_type)) {
+            $query .= " AND m1.type = :map_type ";
+        }
+        $query .= " limit 10";
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        if (!is_null($map_type)) {
+            $stmt->bindValue(':map_type', $map_type, \PDO::PARAM_STR);
+        }
         $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }

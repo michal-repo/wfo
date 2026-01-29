@@ -272,9 +272,9 @@ async function populate_stats_in_modal() {
     }
 }
 
-async function save_map(map, name, imageBoundsX, imageBoundsY) {
+async function save_map(map, name, imageBoundsX, imageBoundsY, type) {
     try {
-        const response = await axios.post('api/map', { map: map, name: name, imageBoundsX: imageBoundsX, imageBoundsY: imageBoundsY });
+        const response = await axios.post('api/map', { map: map, name: name, imageBoundsX: imageBoundsX, imageBoundsY: imageBoundsY, type: type });
         return response.data;
     } catch (error) {
         console.error("Error saving map:", error);
@@ -282,11 +282,22 @@ async function save_map(map, name, imageBoundsX, imageBoundsY) {
     }
 }
 
+async function delete_map(map_id) {
+    try {
+        const response = await axios.post('api/map/delete', { map_id: map_id });
+    } catch (error) {
+        console.error("Error deleting map:", error);
+    }
+
+    await populate_maps_list();
+}
+
 async function upload_map() {
     const map = document.getElementById("map-file").files[0];
     const name = document.getElementById("map-name").value;
     const imageBoundsX = parseFloat(document.getElementById("map-imageBoundsX").value);
     const imageBoundsY = parseFloat(document.getElementById("map-imageBoundsY").value);
+    const type = document.getElementById("map-type").value;
 
     if (!map) {
         alert("Please select a file.");
@@ -301,7 +312,7 @@ async function upload_map() {
     const reader = new FileReader();
     reader.onload = async function (event) {
         const base64String = event.target.result.split(',')[1];
-        const result = await save_map(base64String, name, imageBoundsX, imageBoundsY);
+        const result = await save_map(base64String, name, imageBoundsX, imageBoundsY, type);
         if (result) {
             alert("Map uploaded successfully!");
         } else {
@@ -310,12 +321,12 @@ async function upload_map() {
     };
     reader.readAsDataURL(map);
 
-    populate_maps_list();
+    await populate_maps_list();
 }
 
 async function get_maps() {
     try {
-        const response = await axios.get('api/maps');
+        const response = await axios.get('api/maps/info');
         return response.data.data;
     } catch (error) {
         console.error("Error getting maps:", error);
@@ -325,7 +336,17 @@ async function get_maps() {
 
 async function get_recent_seats() {
     try {
-        const response = await axios.get('api/seats/recent');
+        const response = await axios.get('api/seats/recent/office');
+        return response.data.data;
+    } catch (error) {
+        console.error("Error getting maps:", error);
+        return null;
+    }
+}
+
+async function get_recent_spots() {
+    try {
+        const response = await axios.get('api/seats/recent/parking');
         return response.data.data;
     } catch (error) {
         console.error("Error getting maps:", error);
@@ -342,10 +363,27 @@ async function populate_maps_list() {
             const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between align-items-center';
             li.innerHTML = `
-                <span>${map.name}</span>
-                <input type="file" id="seats-file-${map.id}" accept=".json" />
-                <button class="btn btn-primary btn-sm" onclick="confirm('Are you sure you want to add seats from the selected file? Existing seats will be overwritten!') && bulk_create_seats(${map.id})">Add seats</button>
-                <button class="btn btn-primary btn-sm" onclick="show_map(${map.id})">Show</button>
+            <div class="container-fluid mb-2">
+                <div class="row">
+                    <div class="col-3">
+                        <span>${map.name}</span>
+                    </div>
+                    <div class="col-6">
+                        <input class="form-control form-control-sm" type="file" id="seats-file-${map.id}" accept=".json" />
+                    </div>
+                    <div class="col-3">
+                        <div class="btn-toolbar justify-content-end" role="toolbar" aria-label="Toolbar operations">
+                            <div class="btn-group me-2" role="group" aria-label="add-seats">
+                                <button class="btn btn-primary btn-sm" onclick="confirm('Are you sure you want to add seats from the selected file? Existing seats will be overwritten!') && bulk_create_seats(${map.id})">Add seats</button>
+                            </div>
+                            <div class="btn-group" role="group" aria-label="operations">
+                                <button class="btn btn-primary btn-sm" onclick="show_map(${map.id})">Show</button>
+                                <button class="btn btn-danger btn-sm" onclick="delete_map(${map.id})">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             `;
             mapsListEl.appendChild(li);
         });
@@ -358,16 +396,20 @@ function show_map(map_id) {
     window.open(`map.html?id=${map_id}`, '_blank');
 }
 
-async function show_map_today() {
-            const today_el = document.getElementById("today-seat");
-            const map_id = today_el.dataset.map_id;
-            const seat = today_el.dataset.seat;
-
-            if (seat == undefined){
-                alert("No seat booked for today.");
-            } else {
-                window.open(`map.html?id=${map_id}&seat_id=${seat}`, '_blank');
-            }
+async function show_map_today(type = 'office') {
+    const today_el = document.getElementById("today-seat");
+    const map_id = today_el.dataset[`${type}_map_id`];
+    const seat = today_el.dataset[`${type}_seat`];
+    console.log(`map_id: ${map_id}, seat: ${seat}`);
+    if (seat == undefined) {
+        if (type === 'office') {
+            alert("No seat booked for today.");
+        } else {
+            alert("No parking spot booked for today.");
+        }
+    } else {
+        window.open(`map.html?id=${map_id}&seat_id=${seat}`, '_blank');
+    }
 }
 
 async function get_map_today() {
@@ -376,31 +418,39 @@ async function get_map_today() {
     try {
         const response = await axios.get(`api/seat/booked?date=${today.toISOString().split('T')[0]}`);
         results = response.data.data;
+        const response2 = await axios.get(`api/spot/booked?date=${today.toISOString().split('T')[0]}`);
+        results2 = response2.data.data;
 
         if (results.result) {
             const map_id = results.result.map_id;
             const seat = results.result.id;
-            today_el.dataset.map_id = map_id; 
-            today_el.dataset.seat = seat;
+            today_el.dataset.office_map_id = map_id;
+            today_el.dataset.office_seat = seat;
+            const map_id2 = results2.result.map_id;
+            const seat2 = results2.result.id;
+            today_el.dataset.parking_map_id = map_id2;
+            today_el.dataset.parking_seat = seat2;
         } else {
-            delete today_el.dataset.map_id;
-            delete today_el.dataset.seat;  
+            delete today_el.dataset.office_map_id;
+            delete today_el.dataset.office_seat;
+            delete today_el.dataset.parking_map_id;
+            delete today_el.dataset.parking_seat;
         }
     } catch (error) {
         delete today_el.dataset.map_id;
-        delete today_el.dataset.seat;  
+        delete today_el.dataset.seat;
         console.error(`Error getting seats for map ${map_id}:`, error);
         return null;
     }
 }
 
 window.addEventListener(
-"load",
-  function () {
-    (async () => {
-      await get_map_today();
-    })();
-  }
+    "load",
+    function () {
+        (async () => {
+            await get_map_today();
+        })();
+    }
 );
 
 async function get_map_seats(map_id) {
@@ -453,14 +503,11 @@ async function bulk_create_seats(map_id) {
     }
 }
 
-async function book_seat() {
-    const seat_name = document.getElementById('seatSelectionSeatName').value;
-    const day = document.getElementById('seatSelectionDay').value;
-    const map_id = document.getElementById('seatSelectionMapSelect').value;
-    if (seat_name != null) {
+async function book(name, day, map_id) {
+    if (name != null && name.trim() !== "") {
         axios.post(`api/seat/book-by-name`, {
             reservation_date: day,
-            seat_name: seat_name,
+            seat_name: name,
             map_id: map_id
         }).then(response => {
             Modal.toggle();
@@ -474,18 +521,47 @@ async function book_seat() {
     }
 }
 
+async function delete_booking(day, map_id) {
+    axios.post(`api/seat/book-by-name`, {
+        reservation_date: day,
+        seat_name: "",
+        map_id: map_id
+    }).then(response => {
+        Modal.toggle();
+        calendar.refetchEvents();
+    }).catch(error => {
+        logError('There was an error when deleting a seat booking:', error);
+    });
+}
+
+async function book_seat() {
+    const seat_name = document.getElementById('seatSelectionSeatName').value;
+    const day = document.getElementById('seatSelectionDay').value;
+    const map_id = document.getElementById('seatSelectionMapSelect').value;
+    await book(seat_name, day, map_id);
+}
+
+async function delete_seat_booking() {
+    const day = document.getElementById('seatSelectionDay').value;
+    const map_id = document.getElementById('seatSelectionMapSelect').value;
+    await delete_booking(day, map_id);
+}
+
 async function populate_maps_list_in_seat_selection() {
     try {
         const maps = await get_maps();
         const seatSelectionSeatNameEl = document.getElementById('seatSelectionSeatName');
         seatSelectionSeatNameEl.value = "";
         const mapsListEl = document.getElementById('seatSelectionMapSelect');
+        mapsListEl.innerHTML = '';
         maps.forEach(map => {
-            const option = document.createElement('option');
-            option.value = map.id;
-            option.text = map.name;
-            option.selected = true;
-            mapsListEl.appendChild(option);
+            if (map.type == 'office') {
+                const option = document.createElement('option');
+                option.value = map.id;
+                option.text = map.name;
+                option.selected = true;
+                mapsListEl.appendChild(option);
+            }
         });
     } catch (error) {
         console.error("Error populating maps list:", error);
@@ -511,4 +587,60 @@ async function populate_recent_seat_choices() {
     } catch (error) {
         console.error("Error populating recent seat choices:", error);
     }
-} 
+}
+
+
+async function book_parking_spot() {
+    const seat_name = document.getElementById('parkingSpotName').value;
+    const day = document.getElementById('seatSelectionDay').value;
+    const map_id = document.getElementById('parkingSpotMapSelect').value;
+    await book(seat_name, day, map_id);
+}
+
+async function delete_parking_spot_booking() {
+    const day = document.getElementById('seatSelectionDay').value;
+    const map_id = document.getElementById('parkingSpotMapSelect').value;
+    await delete_booking(day, map_id);
+}
+
+async function populate_maps_list_in_parking_spot_selection() {
+    try {
+        const maps = await get_maps();
+        const seatSelectionSeatNameEl = document.getElementById('parkingSpotName');
+        seatSelectionSeatNameEl.value = "";
+        const mapsListEl = document.getElementById('parkingSpotMapSelect');
+        mapsListEl.innerHTML = '';
+        maps.forEach(map => {
+            if (map.type == 'parking') {
+                const option = document.createElement('option');
+                option.value = map.id;
+                option.text = map.name;
+                option.selected = true;
+                mapsListEl.appendChild(option);
+            }
+        });
+    } catch (error) {
+        console.error("Error populating maps list:", error);
+    }
+}
+
+async function populate_recent_parking_spot_choices() {
+    try {
+        const recentSpots = await get_recent_spots();
+        const recentChoicesEl = document.getElementById('recent-parking-choices');
+        recentChoicesEl.innerHTML = '<label>Recent Spots:</label><br>';
+        recentSpots.result.forEach(spot => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn btn-secondary btn-sm m-1';
+            button.innerText = spot.name;
+            button.onclick = () => {
+                document.getElementById('parkingSpotName').value = spot.name;
+            };
+            recentChoicesEl.appendChild(button);
+        });
+
+    } catch (error) {
+        console.error("Error populating recent parking spot choices:", error);
+    }
+}
