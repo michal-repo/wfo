@@ -401,12 +401,8 @@ async function show_map_today(type = 'office') {
     const map_id = today_el.dataset[`${type}_map_id`];
     const seat = today_el.dataset[`${type}_seat`];
     console.log(`map_id: ${map_id}, seat: ${seat}`);
-    if (seat == undefined) {
-        if (type === 'office') {
-            alert("No seat booked for today.");
-        } else {
-            alert("No parking spot booked for today.");
-        }
+    if (seat == undefined || map_id == undefined) {
+        alert("No map available for today.");
     } else {
         window.open(`map.html?id=${map_id}&seat_id=${seat}`, '_blank');
     }
