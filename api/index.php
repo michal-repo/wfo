@@ -501,6 +501,23 @@ $router->post('/map', function () {
     }
 });
 
+$router->post('/map/delete', function () {
+    try {
+        log_in_check(true);
+        $j = json_decode(file_get_contents("php://input"), true);
+        if (is_null($j) || $j === false || !isset($j['map_id'])) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON with map data']]);
+            die();
+        }
+        $api = new API();
+        $result = $api->delete_map($j['map_id']);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
 $router->get('/maps', function () {
     try {
         log_in_check(true);

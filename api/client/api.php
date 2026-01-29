@@ -873,6 +873,15 @@ class API
         return $stmt->execute();
     }
 
+    public function delete_map($map_id)
+    {
+        $query = "DELETE FROM maps WHERE id = :map_id AND user_id = :user_id";
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':map_id', $map_id, \PDO::PARAM_INT);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
     public function get_maps()
     {
         $query = "SELECT id, map, name FROM maps WHERE user_id = :user_id";

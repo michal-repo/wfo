@@ -282,6 +282,16 @@ async function save_map(map, name, imageBoundsX, imageBoundsY) {
     }
 }
 
+async function delete_map(map_id) {
+    try {
+        const response = await axios.post('api/map/delete', { map_id: map_id });
+    } catch (error) {
+        console.error("Error deleting map:", error);
+    }
+
+    await populate_maps_list();
+}
+
 async function upload_map() {
     const map = document.getElementById("map-file").files[0];
     const name = document.getElementById("map-name").value;
@@ -310,7 +320,7 @@ async function upload_map() {
     };
     reader.readAsDataURL(map);
 
-    populate_maps_list();
+    await populate_maps_list();
 }
 
 async function get_maps() {
@@ -346,6 +356,7 @@ async function populate_maps_list() {
                 <input type="file" id="seats-file-${map.id}" accept=".json" />
                 <button class="btn btn-primary btn-sm" onclick="confirm('Are you sure you want to add seats from the selected file? Existing seats will be overwritten!') && bulk_create_seats(${map.id})">Add seats</button>
                 <button class="btn btn-primary btn-sm" onclick="show_map(${map.id})">Show</button>
+                <button class="btn btn-danger btn-sm" onclick="delete_map(${map.id})">Delete</button>
             `;
             mapsListEl.appendChild(li);
         });
@@ -457,7 +468,7 @@ async function book_seat() {
     const seat_name = document.getElementById('seatSelectionSeatName').value;
     const day = document.getElementById('seatSelectionDay').value;
     const map_id = document.getElementById('seatSelectionMapSelect').value;
-    if (seat_name != null) {
+    if (seat_name != null && seat_name.trim() !== "") {
         axios.post(`api/seat/book-by-name`, {
             reservation_date: day,
             seat_name: seat_name,
@@ -474,12 +485,28 @@ async function book_seat() {
     }
 }
 
+async function delete_seat_booking() {
+    const day = document.getElementById('seatSelectionDay').value;
+    const map_id = document.getElementById('seatSelectionMapSelect').value;
+    axios.post(`api/seat/book-by-name`, {
+        reservation_date: day,
+        seat_name: "",
+        map_id: map_id
+    }).then(response => {
+        Modal.toggle();
+        calendar.refetchEvents();
+    }).catch(error => {
+        logError('There was an error when deleting a seat booking:', error);
+    });
+}
+
 async function populate_maps_list_in_seat_selection() {
     try {
         const maps = await get_maps();
         const seatSelectionSeatNameEl = document.getElementById('seatSelectionSeatName');
         seatSelectionSeatNameEl.value = "";
         const mapsListEl = document.getElementById('seatSelectionMapSelect');
+        mapsListEl.innerHTML = '';
         maps.forEach(map => {
             const option = document.createElement('option');
             option.value = map.id;
@@ -511,4 +538,4 @@ async function populate_recent_seat_choices() {
     } catch (error) {
         console.error("Error populating recent seat choices:", error);
     }
-} 
+}
