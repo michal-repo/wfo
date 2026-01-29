@@ -488,13 +488,18 @@ $router->post('/map', function () {
     try {
         log_in_check(true);
         $j = json_decode(file_get_contents("php://input"), true);
-        if (is_null($j) || $j === false || !isset($j['map'])) {
+        if (is_null($j) || $j === false || !isset($j['map']) || !isset($j['type']) || !isset($j['name']) || !isset($j['imageBoundsX']) || !isset($j['imageBoundsY'])) {
             header('HTTP/1.1 400 Bad Request');
             echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON with map data']]);
             die();
         }
         $api = new API();
-        $result = $api->save_map($j['map'], $j['name'], $j['imageBoundsX'], $j['imageBoundsY']);
+        if (!in_array($j['type'], $api->map_allowed_types())) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Invalid map type']]);
+            die();
+        }
+        $result = $api->save_map($j['map'], $j['name'],  $j['imageBoundsX'], $j['imageBoundsY'], $j['type']);
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
     } catch (\Throwable $th) {
         handleErr($th);
@@ -523,6 +528,17 @@ $router->get('/maps', function () {
         log_in_check(true);
         $api = new API();
         $maps = $api->get_maps();
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $maps]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->get('/maps/info', function () {
+    try {
+        log_in_check(true);
+        $api = new API();
+        $maps = $api->get_maps(true);
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $maps]);
     } catch (\Throwable $th) {
         handleErr($th);
@@ -650,11 +666,24 @@ $router->get('/seat/booked', function () {
     }
 });
 
-$router->get('/seats/recent', function () {
+$router->get('/spot/booked', function () {
+    try {
+        log_in_check(true);
+        $day = date('Y-m-d', strtotime(checkGetParam('date', NULL)));
+
+        $api = new API();
+        $result = $api->get_booked_parking_spot($day);
+        echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->get('/seats/recent/(\w+)', function ($map_type) {
     try {
         log_in_check(true);
         $api = new API();
-        $result = $api->get_recent_seats();
+        $result = $api->get_recent_seats($map_type);
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => ['result' => $result]]);
     } catch (\Throwable $th) {
         handleErr($th);

@@ -31,7 +31,8 @@
 				if (r) {
 					settings = await get_settings();
 					headerToolbarCustomButtons += " Menu";
-					headerToolbarCustomButtons += " Map";
+					headerToolbarCustomButtons += " Office";
+					headerToolbarCustomButtons += " Parking";
 					headerToolbarCustomButtons += " LogOut";
 				} else {
 					headerToolbarCustomButtons += " LogIn";
@@ -59,12 +60,19 @@
 							},
 							hint: "Show menu"
 						},
-						Map: {
-							text: 'Map',
+						Office: {
+							text: 'Office map',
 							click: function () {
-								show_map_today();
+								show_map_today('office');
 							},
-							hint: "Show map"
+							hint: "Show office map"
+						},
+						Parking: {
+							text: 'Parking map',
+							click: function () {
+								show_map_today('parking');
+							},
+							hint: "Show parking map"
 						},
 						LogOut: {
 							text: 'Log out',
@@ -131,6 +139,12 @@
 				populate_maps_list_in_seat_selection();
 				populate_recent_seat_choices();
 				Modal = new bootstrap.Modal(document.getElementById('seatSelection'));
+				document.getElementById('seatSelectionDay').value = day;
+				Modal.toggle();
+			} else if (event_text.includes("Parking Spot")) {
+				populate_maps_list_in_parking_spot_selection();
+				populate_recent_parking_spot_choices();
+				Modal = new bootstrap.Modal(document.getElementById('parkingSpotSelection'));
 				document.getElementById('seatSelectionDay').value = day;
 				Modal.toggle();
 			} else if (event_text.includes("Add Overtime")) {
@@ -553,6 +567,11 @@
 				<div class="modal-body">
 					<input type="file" class="form-control" id="map-file" required accept=".png">
 					<input type="text" class="form-control mt-2" id="map-name" required placeholder="Enter map name">
+					<select class="form-select mt-2" id="map-type" required>
+						<option value="" disabled selected>Select map type</option>
+						<option value="office">Office</option>
+						<option value="parking">Parking</option>
+					</select>
 					<input type="text" class="form-control mt-2" id="map-imageBoundsX" required
 						placeholder="Enter image bounds X">
 					<input type="text" class="form-control mt-2" id="map-imageBoundsY" required
@@ -586,6 +605,32 @@
 					<input type="hidden" class="form-control mt-2" id="seatSelectionDay">
 					<button type="button" class="btn btn-primary mt-2" onclick="book_seat()">Book Seat</button>
 					<button type="button" class="btn btn-danger mt-2" onclick="delete_seat_booking()">Delete Seat Booking</button>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade modal-xl" id="parkingSpotSelection" tabindex="-1" aria-labelledby="parkingSpotLabel"
+		aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="parkingSpotLabel">Parking Spot Selection</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<input type="text" class="form-control mt-2" id="parkingSpotName" required placeholder="Enter parking spot name">
+					<div id="recent-parking-choices"></div>
+					<select class="form-select mt-2" id="parkingSpotMapSelect" required>
+						<option value="" disabled selected>Select map</option>
+					</select>
+					<input type="hidden" class="form-control mt-2" id="parkingSpotDay">
+					<button type="button" class="btn btn-primary mt-2" onclick="book_parking_spot()">Book Parking Spot</button>
+					<button type="button" class="btn btn-danger mt-2" onclick="delete_parking_spot_booking()">Delete Parking Spot Booking</button>
 				</div>
 
 				<div class="modal-footer">
