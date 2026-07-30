@@ -223,10 +223,10 @@ function update_stats(year, month) {
             && response.data.data.overtime_office_only !== null
             && response.data.data.month_target !== null) {
 
-            calc = ((response.data.data.office_days + (response.data.data.overtime_office_only / 8)) / (((response.data.data.working_days - (response.data.data.holidays + response.data.data.sickleave)) * response.data.data.month_target) / 100)) * 100;
+            calc = response.data.data.month_target_progress;
             office_min.innerText = (response.data.data.office_days + (response.data.data.overtime_office_only / 8)) + "/" + (((response.data.data.working_days - (response.data.data.holidays + response.data.data.sickleave)) * response.data.data.month_target) / 100);
 
-            month_target_completion.innerText = `(${calc.toFixed(2)}%)`;
+            month_target_completion.innerText = `(${response.data.data.month_target_actual.toFixed(2)}%)`;
         }
 
         if (response.data.data.working_days_year !== null
@@ -234,9 +234,9 @@ function update_stats(year, month) {
             && response.data.data.overtime_year_office_only !== null
             && response.data.data.year_target !== null) {
 
-            calc_year = ((response.data.data.office_days_year + (response.data.data.overtime_year_office_only / 8)) / (((response.data.data.working_days_year - (response.data.data.holidays_year + response.data.data.sickleave_year)) * response.data.data.year_target) / 100)) * 100;
+            calc_year = response.data.data.year_target_progress;
 
-            year_target_completion.innerText = `(${calc_year.toFixed(2)}%)`;
+            year_target_completion.innerText = `(${response.data.data.year_target_actual.toFixed(2)}%)`;
         }
 
         if (calc >= 100) {

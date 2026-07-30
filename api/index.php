@@ -215,6 +215,22 @@ $router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
         $overtime_year = $api->get_wfo_overtime_hours_sum_office_only_range($period_start, $period_end);
         $result['overtime_year_office_only'] = $overtime_year;
 
+        // Progress %: server-side mirror of the JS progress-bar calculation.
+        // *_actual = attendance % of available days; *_progress = that value relative to the target.
+        $month_available = $result['working_days'] - ($result['holidays'] + $result['sickleave']);
+        $month_office = $result['office_days'] + ($result['overtime_office_only'] / 8);
+        $result['month_target_actual'] = $month_available != 0 ? round(($month_office / $month_available) * 100, 2) : 0;
+        $result['month_target_progress'] = ($result['month_target'] !== null && $result['month_target'] != 0 && $month_available != 0)
+            ? round(($result['month_target_actual'] / $result['month_target']) * 100, 2)
+            : 0;
+
+        $year_available = $result['working_days_year'] - ($result['holidays_year'] + $result['sickleave_year']);
+        $year_office = $result['office_days_year'] + ($result['overtime_year_office_only'] / 8);
+        $result['year_target_actual'] = $year_available != 0 ? round(($year_office / $year_available) * 100, 2) : 0;
+        $result['year_target_progress'] = ($result['year_target'] !== null && $result['year_target'] != 0 && $year_available != 0)
+            ? round(($result['year_target_actual'] / $result['year_target']) * 100, 2)
+            : 0;
+
         if ($result) {
             echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $result]);
         } else {
