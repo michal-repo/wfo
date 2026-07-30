@@ -426,29 +426,99 @@ class API
 
     public function get_wfo_year_target($year)
     {
-        $query = "select target from wfo_year_target WHERE year_of_target = :year_of_target AND user_id = :user_id limit 1";
+        $query = "select `target`, start_month, end_month, start_year, end_year from wfo_year_target WHERE year_of_target = :year_of_target AND user_id = :user_id limit 1";
 
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->bindValue(':year_of_target', $year, \PDO::PARAM_INT);
 
         $stmt->execute();
-        $target_found = $stmt->fetchColumn();
+        $target_found = $stmt->fetch(\PDO::FETCH_ASSOC);
         return $target_found;
     }
 
-    public function add_wfo_year_target($year, $target)
+    public function add_wfo_year_target($year, $target, $start_month, $start_year, $end_month, $end_year)
     {
-        $query = "REPLACE INTO wfo_year_target (year_of_target, `target`, user_id) VALUES (:year_of_target, :target, :user_id)";
+        $query = "REPLACE INTO wfo_year_target (year_of_target, `target`, start_month, end_month, start_year, end_year, user_id) VALUES (:year_of_target, :target, :start_month, :end_month, :start_year, :end_year, :user_id)";
 
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->bindValue(':year_of_target', $year, \PDO::PARAM_INT);
         $stmt->bindValue(':target', $target, \PDO::PARAM_INT);
+        $stmt->bindValue(':start_month', $start_month, \PDO::PARAM_INT);
+        $stmt->bindValue(':end_month', $end_month, \PDO::PARAM_INT);
+        $stmt->bindValue(':start_year', $start_year, \PDO::PARAM_INT);
+        $stmt->bindValue(':end_year', $end_year, \PDO::PARAM_INT);
 
         $result = $stmt->execute();
 
         return $result;
+    }
+
+    public function get_wfo_days_count_range($start, $end)
+    {
+        $query = 'SELECT count(*) FROM wfo_days WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':start', $start, \PDO::PARAM_STR);
+        $stmt->bindValue(':end', $end, \PDO::PARAM_STR);
+        $stmt->execute();
+
+        return $stmt->fetchColumn();
+    }
+
+    public function get_wfo_holidays_count_range($start, $end)
+    {
+        $query = 'SELECT count(*) FROM wfo_holidays WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':start', $start, \PDO::PARAM_STR);
+        $stmt->bindValue(':end', $end, \PDO::PARAM_STR);
+        $stmt->execute();
+
+        return $stmt->fetchColumn();
+    }
+
+    public function get_wfo_sickleave_count_range($start, $end)
+    {
+        $query = 'SELECT count(*) FROM wfo_sickleave WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':start', $start, \PDO::PARAM_STR);
+        $stmt->bindValue(':end', $end, \PDO::PARAM_STR);
+        $stmt->execute();
+
+        return $stmt->fetchColumn();
+    }
+
+    public function get_wfo_overtime_hours_sum_office_only_range($start, $end)
+    {
+        $query = 'SELECT SUM(t1.overtime_hours) FROM wfo_overtime as t1 INNER JOIN wfo_days as t2 ON t1.defined_date = t2.defined_date AND t1.user_id = t2.user_id WHERE t1.user_id = :user_id AND t1.defined_date >= :start AND t1.defined_date <= :end';
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':start', $start, \PDO::PARAM_STR);
+        $stmt->bindValue(':end', $end, \PDO::PARAM_STR);
+        $stmt->execute();
+
+        $sum = $stmt->fetchColumn();
+        return $sum ? $sum : 0;
+    }
+
+    public function get_wfo_working_days_range($start_year, $start_month, $end_year, $end_month)
+    {
+        $query = "SELECT SUM(working_days) FROM wfo_working_days WHERE user_id = :user_id AND ((`year` * 100) + `month`) BETWEEN :start_ym AND :end_ym";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':start_ym', ($start_year * 100) + $start_month, \PDO::PARAM_INT);
+        $stmt->bindValue(':end_ym', ($end_year * 100) + $end_month, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchColumn();
     }
 
     public function get_wfo_working_days($year, $month = NULL)

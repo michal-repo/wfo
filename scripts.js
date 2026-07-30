@@ -35,8 +35,14 @@ function set_working_days(year, month, target) {
     });
 }
 
-function set_year_target(year, target) {
-    axios.post(`api/target/year/${year}/target/${target}`).then(response => {
+function set_year_target(year, target, start_month, start_year, end_month, end_year) {
+    axios.post(`api/target/year/${year}`, {
+        target: target,
+        start_month: start_month,
+        start_year: start_year,
+        end_month: end_month,
+        end_year: end_year
+    }).then(response => {
         return true;
     }).catch(error => {
         return false;
@@ -176,8 +182,10 @@ function generate_hidden_days(days) {
 
 function update_stats(year, month) {
     const month_target = document.getElementById('month-target');
+    const month_target_completion = document.getElementById('month-target-completion');
     const month_target_progressbar = document.getElementById('month-target-progressbar');
     const year_target = document.getElementById('year-target');
+    const year_target_completion = document.getElementById('year-target-completion');
     const year_target_progressbar = document.getElementById('year-target-progressbar');
     const working_days = document.getElementById('working-days');
     const holidays = document.getElementById('holidays');
@@ -187,15 +195,24 @@ function update_stats(year, month) {
 
     const month_target_edit = document.getElementById('month-target-edit');
     const year_target_edit = document.getElementById('year-target-edit');
+    const year_start_month_edit = document.getElementById('year-start-month-edit');
+    const year_start_year_edit = document.getElementById('year-start-year-edit');
+    const year_end_month_edit = document.getElementById('year-end-month-edit');
+    const year_end_year_edit = document.getElementById('year-end-year-edit');
     const working_days_edit = document.getElementById('working-days-edit');
 
     let calc = 0;
     let calc_year = 0;
     axios.get(`api/target/year/${year}/month/${month}`).then(response => {
+        console.log(response.data.data);
         month_target.innerText = response.data.data.month_target !== null ? response.data.data.month_target : "100";
         month_target_edit.value = month_target.innerText;
         year_target.innerText = response.data.data.year_target !== null ? response.data.data.year_target : "100";
         year_target_edit.value = year_target.innerText;
+        year_start_month_edit.value = response.data.data.year_start_month;
+        year_start_year_edit.value = response.data.data.year_start_year;
+        year_end_month_edit.value = response.data.data.year_end_month;
+        year_end_year_edit.value = response.data.data.year_end_year;
         working_days.innerText = response.data.data.working_days !== null ? response.data.data.working_days : "-";
         working_days_edit.value = working_days.innerText;
         holidays.innerText = response.data.data.holidays !== null ? response.data.data.holidays : "-";
@@ -208,6 +225,8 @@ function update_stats(year, month) {
 
             calc = ((response.data.data.office_days + (response.data.data.overtime_office_only / 8)) / (((response.data.data.working_days - (response.data.data.holidays + response.data.data.sickleave)) * response.data.data.month_target) / 100)) * 100;
             office_min.innerText = (response.data.data.office_days + (response.data.data.overtime_office_only / 8)) + "/" + (((response.data.data.working_days - (response.data.data.holidays + response.data.data.sickleave)) * response.data.data.month_target) / 100);
+
+            month_target_completion.innerText = `(${calc.toFixed(2)}%)`;
         }
 
         if (response.data.data.working_days_year !== null
@@ -216,6 +235,8 @@ function update_stats(year, month) {
             && response.data.data.year_target !== null) {
 
             calc_year = ((response.data.data.office_days_year + (response.data.data.overtime_year_office_only / 8)) / (((response.data.data.working_days_year - (response.data.data.holidays_year + response.data.data.sickleave_year)) * response.data.data.year_target) / 100)) * 100;
+
+            year_target_completion.innerText = `(${calc_year.toFixed(2)}%)`;
         }
 
         if (calc >= 100) {

@@ -173,25 +173,38 @@ $router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
     try {
         $api = new API();
         $result = [];
-        $year_target = $api->get_wfo_year_target($year);
-        $result['year_target'] = $year_target ? $year_target : null;
+        $year_target_row = $api->get_wfo_year_target($year);
+        $result['year_target'] = $year_target_row ? $year_target_row['target'] : null;
+
+        // Year-target period: stored range, or the whole calendar year when unset.
+        $start_month = $year_target_row ? intval($year_target_row['start_month']) : 1;
+        $end_month = $year_target_row ? intval($year_target_row['end_month']) : 12;
+        $start_year = $year_target_row ? intval($year_target_row['start_year']) : intval($year);
+        $end_year = $year_target_row ? intval($year_target_row['end_year']) : intval($year);
+        $result['year_start_month'] = $start_month;
+        $result['year_end_month'] = $end_month;
+        $result['year_start_year'] = $start_year;
+        $result['year_end_year'] = $end_year;
+        $period_start = sprintf('%04d-%02d-01', $start_year, $start_month);
+        $period_end = date('Y-m-t', strtotime(sprintf('%04d-%02d-01', $end_year, $end_month)));
+
         $month_target = $api->get_wfo_month_target($year, $month);
         $result['month_target'] = $month_target ? $month_target : $result['year_target'];
         $office_days = $api->get_wfo_days_count($year, $month);
         $result['office_days'] = $office_days;
-        $office_days_year = $api->get_wfo_days_count($year);
+        $office_days_year = $api->get_wfo_days_count_range($period_start, $period_end);
         $result['office_days_year'] = $office_days_year;
         $working_days = $api->get_wfo_working_days($year, $month);
         $result['working_days'] = $working_days ? $working_days : 0;
-        $working_days_year = $api->get_wfo_working_days($year);
+        $working_days_year = $api->get_wfo_working_days_range($start_year, $start_month, $end_year, $end_month);
         $result['working_days_year'] = $working_days_year ? intval($working_days_year) : 0;
         $holidays = $api->get_wfo_holidays_count($year, $month);
         $result['holidays'] = $holidays ? $holidays : 0;
-        $holidays_year = $api->get_wfo_holidays_count($year);
+        $holidays_year = $api->get_wfo_holidays_count_range($period_start, $period_end);
         $result['holidays_year'] = $holidays_year ? $holidays_year : 0;
         $sickleave = $api->get_wfo_sickleave_count($year, $month);
         $result['sickleave'] = $sickleave ? $sickleave : 0;
-        $sickleave_year = $api->get_wfo_sickleave_count($year);
+        $sickleave_year = $api->get_wfo_sickleave_count_range($period_start, $period_end);
         $result['sickleave_year'] = $sickleave_year ? $sickleave_year : 0;
         $overtime = $api->get_wfo_overtime_hours_sum($year, $month);
         $result['overtime'] = $overtime;
@@ -199,7 +212,7 @@ $router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
         $result['overtime_year'] = $overtime_year;
         $overtime = $api->get_wfo_overtime_hours_sum_office_only($year, $month);
         $result['overtime_office_only'] = $overtime;
-        $overtime_year = $api->get_wfo_overtime_hours_sum_office_only($year);
+        $overtime_year = $api->get_wfo_overtime_hours_sum_office_only_range($period_start, $period_end);
         $result['overtime_year_office_only'] = $overtime_year;
 
         if ($result) {
@@ -227,10 +240,16 @@ $router->post('/target/year/(\d+)/month/(\d+)/target/(\d+)', function ($year, $m
     }
 });
 
-$router->post('/target/year/(\d+)/target/(\d+)', function ($year, $target) {
+$router->post('/target/year/(\d+)', function ($year) {
     try {
+        $j = json_decode(file_get_contents("php://input"), true);
+        $target = isset($j['target']) ? intval($j['target']) : 0;
+        $start_month = isset($j['start_month']) ? intval($j['start_month']) : 1;
+        $end_month = isset($j['end_month']) ? intval($j['end_month']) : 12;
+        $start_year = isset($j['start_year']) ? intval($j['start_year']) : intval($year);
+        $end_year = isset($j['end_year']) ? intval($j['end_year']) : intval($year);
         $api = new API();
-        $result = $api->add_wfo_year_target($year, $target);
+        $result = $api->add_wfo_year_target($year, $target, $start_month, $start_year, $end_month, $end_year);
         if ($result) {
             echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
         } else {
