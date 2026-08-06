@@ -20,7 +20,9 @@ async function register_check() {
 
 
 function set_month_target(year, month, target) {
-    axios.post(`api/target/year/${year}/month/${month}/target/${target}`).then(response => {
+    axios.post(`api/target/year/${year}/month/${month}`, {
+        target: target
+    }).then(response => {
         return true;
     }).catch(error => {
         return false;

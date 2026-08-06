@@ -242,8 +242,10 @@ $router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
     }
 });
 
-$router->post('/target/year/(\d+)/month/(\d+)/target/(\d+)', function ($year, $month, $target) {
+$router->post('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
     try {
+        $j = json_decode(file_get_contents("php://input"), true);
+        $target = isset($j['target']) ? floatval($j['target']) : 0;
         $api = new API();
         $result = $api->add_wfo_month_target($year, $month, $target);
         if ($result) {
