@@ -417,7 +417,7 @@ class API
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->bindValue(':month_of_target', $month, \PDO::PARAM_INT);
         $stmt->bindValue(':year_of_target', $year, \PDO::PARAM_INT);
-        $stmt->bindValue(':target', $target, \PDO::PARAM_INT);
+        $stmt->bindValue(':target', $target, \PDO::PARAM_STR);
 
         $result = $stmt->execute();
 
