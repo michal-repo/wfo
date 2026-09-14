@@ -345,7 +345,7 @@ class API
                 "title" => "📍 Show Parking Map",
                 "start" => $dt->format("Y-m-d"),
                 "end" => $dt->format("Y-m-d"),
-                "color" => "#b3e1ff",
+                "color" => "#008de9",
                 "cursor" => "pointer",
                 "id" => 15
             ];
