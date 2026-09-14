@@ -206,7 +206,6 @@ function update_stats(year, month) {
     let calc = 0;
     let calc_year = 0;
     axios.get(`api/target/year/${year}/month/${month}`).then(response => {
-        console.log(response.data.data);
         month_target.innerText = response.data.data.month_target !== null ? response.data.data.month_target : "100";
         month_target_edit.value = month_target.innerText;
         year_target.innerText = response.data.data.year_target !== null ? response.data.data.year_target : "100";
@@ -430,6 +429,41 @@ async function show_map_today(type = 'office') {
     }
 }
 
+async function show_parking_map_for_selected_day(day) {
+    await get_parking_spot(day);
+    const selected_spot_el = document.getElementById("selected-parking-spot-seat");
+    const map_id = selected_spot_el.dataset[`parking_map_id`];
+    const spot = selected_spot_el.dataset[`parking_spot`];
+    if (spot == undefined || map_id == undefined) {
+        window.open(`map.html?id=${map_id}`, '_blank');
+    } else {
+        window.open(`map.html?id=${map_id}&seat_id=${spot}`, '_blank');
+    }
+}
+
+async function get_parking_spot(day) {
+    try {
+        const selected_spot_el = document.getElementById("selected-parking-spot-seat");
+        const response = await axios.get(`api/spot/booked?date=${day.toISOString().split('T')[0]}`);
+        const results = response.data.data;
+
+        if (results.result) {
+            const map_id = results.result.map_id;
+            const spot = results.result.id;
+            selected_spot_el.dataset.parking_map_id = map_id;
+            selected_spot_el.dataset.parking_spot = spot;
+        } else {
+            selected_spot_el.dataset.parking_map_id = default_maps.parking;
+            delete selected_spot_el.dataset.parking_spot;
+        }
+    } catch (error) {
+        delete selected_spot_el.dataset.parking_map_id;
+        delete selected_spot_el.dataset.parking_spot;
+        console.error(`Error getting parking spot for day ${day.toISOString().split('T')[0]}:`, error);
+        return null;
+    }
+}
+
 async function get_map_today() {
     const today = new Date();
     const today_el = document.getElementById("today-seat");
@@ -483,7 +517,7 @@ async function get_map_today() {
     } catch (error) {
         delete today_el.dataset.parking_map_id;
         delete today_el.dataset.parking_seat;
-        console.error(`Error getting seats for map ${map_id}:`, error);
+        console.error(`Error getting parking spot for map ${map_id}:`, error);
         return null;
     }
 }
