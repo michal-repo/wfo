@@ -155,6 +155,8 @@
 				Modal = new bootstrap.Modal(document.getElementById('parkingSpotSelection'));
 				document.getElementById('seatSelectionDay').value = day;
 				Modal.toggle();
+			} else if (event_text.includes("Show Parking Map")) {
+				show_parking_map_for_selected_day(new Date(day));
 			} else if (event_text.includes("Add Overtime")) {
 				const hours = prompt("How many hours of overtime?");
 				if (hours != null) {
@@ -222,6 +224,7 @@
 
 <body>
 	<span id="today-seat"></span>
+	<span id="selected-parking-spot-seat"></span>
 	<div class="offcanvas offcanvas-start navigation-menu" tabindex="-1" id="sidebarMenu"
 		aria-labelledby="sidebarMenuLabel">
 		<div class="offcanvas-header">

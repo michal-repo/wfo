@@ -210,6 +210,10 @@ class API
                 $res[] = $this->generate_overtime_event($dt);
                 $res[] = $this->generate_book_seat_event($dt);
                 $res[] = $this->generate_book_parking_spot_event($dt);
+                $pmsp = $this->generate_parking_spot_map_event($dt);
+                if ($pmsp) {
+                    $res[] = $pmsp;
+                }
             } else {
                 if (in_array($dt->format("N"), [1, 2, 3, 4, 5])) {
                     $res[] = [
@@ -226,6 +230,10 @@ class API
                     $res[] = $this->generate_overtime_event($dt);
                     $res[] = $this->generate_book_seat_event($dt);
                     $res[] = $this->generate_book_parking_spot_event($dt);
+                    $pmsp = $this->generate_parking_spot_map_event($dt);
+                    if ($pmsp) {
+                    $res[] = $pmsp;
+                }
                 }
             }
             $overtime_key = array_search($dt->format("Y-m-d"), $overtime_days);
@@ -327,6 +335,22 @@ class API
             "cursor" => "pointer",
             "id" => 13
         ];
+    }
+
+    private function generate_parking_spot_map_event($dt): array | null
+    {
+        $b = $this->get_booked_parking_spot($dt->format("Y-m-d"));
+        if ($b && $b > 0) {
+            return [
+                "title" => "📍 Show Parking Map",
+                "start" => $dt->format("Y-m-d"),
+                "end" => $dt->format("Y-m-d"),
+                "color" => "#b3e1ff",
+                "cursor" => "pointer",
+                "id" => 15
+            ];
+        }
+        return NULL;
     }
 
     private function generate_bank_holiday_event($dt)
