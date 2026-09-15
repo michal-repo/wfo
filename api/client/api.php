@@ -479,6 +479,55 @@ class API
         return $result;
     }
 
+    public function get_wfo_user_year_holidays($year)
+    {
+        $query = "SELECT holidays FROM wfo_user_year_holidays WHERE `year` = :year AND user_id = :user_id ORDER BY id DESC LIMIT 1";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchColumn();
+    }
+
+    public function get_remaining_wfo_user_year_holidays($year)
+    {
+        $query = "SELECT (user_year_holidays.max_holidays - user_holidays.used_holidays) as remaining_holidays from "
+        ."(SELECT holidays as max_holidays FROM wfo_user_year_holidays WHERE `year` = :year AND user_id = :user_id ORDER BY id DESC LIMIT 1) as user_year_holidays, "
+        ."(select count(*) as used_holidays from wfo_holidays wh where wh.user_id = :user_id and YEAR(wh.defined_date) = :year  ) as user_holidays limit 1";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchColumn();
+    }
+
+    public function add_wfo_user_year_holidays($year, $holidays)
+    {
+        $existing = $this->get_wfo_user_year_holidays($year);
+        if ($existing !== false) {
+            $query = "UPDATE wfo_user_year_holidays SET holidays = :holidays WHERE `year` = :year AND user_id = :user_id";
+
+            $stmt = $this->db->dbh->prepare($query);
+            $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+            $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+            $stmt->bindValue(':holidays', $holidays, \PDO::PARAM_INT);
+
+            return $stmt->execute();
+        }
+
+        $query = "INSERT INTO wfo_user_year_holidays (`year`, holidays, user_id) VALUES (:year, :holidays, :user_id)";
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        $stmt->bindValue(':holidays', $holidays, \PDO::PARAM_INT);
+
+        return $stmt->execute();
+    }
+
     public function get_wfo_days_count_range($start, $end)
     {
         $query = 'SELECT count(*) FROM wfo_days WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
