@@ -202,6 +202,10 @@ $router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
         $result['holidays'] = $holidays ? $holidays : 0;
         $holidays_year = $api->get_wfo_holidays_count_range($period_start, $period_end);
         $result['holidays_year'] = $holidays_year ? $holidays_year : 0;
+        $user_holidays_year = $api->get_wfo_user_year_holidays($year);
+        $result['user_holidays_year'] = $user_holidays_year ? $user_holidays_year : 0;
+        $remaining_holidays_year = $api->get_remaining_wfo_user_year_holidays($year);
+        $result['remaining_holidays_year'] = $remaining_holidays_year ? $remaining_holidays_year : 0;
         $sickleave = $api->get_wfo_sickleave_count($year, $month);
         $result['sickleave'] = $sickleave ? $sickleave : 0;
         $sickleave_year = $api->get_wfo_sickleave_count_range($period_start, $period_end);
@@ -349,6 +353,20 @@ $router->post('/working-days/year/(\d+)/month/(\d+)/working-days/(\d+)', functio
             echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
         } else {
             throw new \Exception("Unable to add new value! Data... year: " . strval($year) . " month: " . strval($month) . " working_days: " . strval($working_days), 1);
+        }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
+$router->post('/year-holidays/year/(\d+)/holidays/(\d+)', function ($year, $holidays) {
+    try {
+        $api = new API();
+        $result = $api->add_wfo_user_year_holidays($year, $holidays);
+        if ($result) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'added']);
+        } else {
+            throw new \Exception("Unable to add new value! Data... year: " . strval($year) . " holidays: " . strval($holidays), 1);
         }
     } catch (\Throwable $th) {
         handleErr($th);

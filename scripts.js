@@ -37,6 +37,14 @@ function set_working_days(year, month, target) {
     });
 }
 
+function set_year_holidays(year, holidays) {
+    axios.post(`api/year-holidays/year/${year}/holidays/${holidays}`).then(response => {
+        return true;
+    }).catch(error => {
+        return false;
+    });
+}
+
 function set_year_target(year, target, start_month, start_year, end_month, end_year) {
     axios.post(`api/target/year/${year}`, {
         target: target,
@@ -191,6 +199,7 @@ function update_stats(year, month) {
     const year_target_progressbar = document.getElementById('year-target-progressbar');
     const working_days = document.getElementById('working-days');
     const holidays = document.getElementById('holidays');
+    const holidays_remaining = document.getElementById('holidays-remaining');
     const sickleave = document.getElementById('sickleave');
     const overtime = document.getElementById('overtime');
     const office_min = document.getElementById('office-actual-min');
@@ -202,6 +211,7 @@ function update_stats(year, month) {
     const year_end_month_edit = document.getElementById('year-end-month-edit');
     const year_end_year_edit = document.getElementById('year-end-year-edit');
     const working_days_edit = document.getElementById('working-days-edit');
+    const year_holidays_edit = document.getElementById('year-holidays-edit');
 
     let calc = 0;
     let calc_year = 0;
@@ -216,7 +226,9 @@ function update_stats(year, month) {
         year_end_year_edit.value = response.data.data.year_end_year;
         working_days.innerText = response.data.data.working_days !== null ? response.data.data.working_days : "-";
         working_days_edit.value = working_days.innerText;
+        year_holidays_edit.value = response.data.data.user_holidays_year !== null ? response.data.data.user_holidays_year : "";
         holidays.innerText = response.data.data.holidays !== null ? response.data.data.holidays : "-";
+        holidays_remaining.innerText = `(${response.data.data.remaining_holidays_year !== null ? response.data.data.remaining_holidays_year : "-"} / ${response.data.data.user_holidays_year !== null ? response.data.data.user_holidays_year : "-"})`;
         sickleave.innerText = response.data.data.sickleave !== null ? response.data.data.sickleave : "-";
         overtime.innerText = response.data.data.overtime !== null ? response.data.data.overtime + "h" : "-";
         if (response.data.data.working_days !== null
@@ -273,9 +285,13 @@ function update_stats(year, month) {
 async function populate_stats_in_modal() {
     try {
         const stats = ["month-target",
+            "month-target-completion",
+            "year-target",
+            "year-target-completion",
             "working-days",
             "office-actual-min",
             "holidays",
+            "holidays-remaining",
             "sickleave",
             "overtime",
         ];

@@ -253,8 +253,14 @@
 							<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#yearTargetModal"
 								href="#">
 								Edit year target
+							</a>
 						</li>
-						</a>
+						<li>
+							<a type="button" class="nav-link" data-bs-toggle="modal" data-bs-target="#yearHolidaysModal"
+								href="#">
+								Edit year holidays
+							</a>
+						</li>
 					</ul>
 				</li>
 
@@ -299,20 +305,23 @@
 	<div id="stats" class="stats container-fluid">
 		<div class="row">
 			<div class="col-10">
-				<span class="stat">Month Target - <b><span id="month-target"></span>%</b><small id="month-target-completion"></small></span>
+				<span class="stat">Month Target - <b><span id="month-target"></span>%</b><small
+						id="month-target-completion" class="ms-2"></small></span>
 				&nbsp;&nbsp;
 				<span class="stat">Working Days - <b id="working-days"></b></span>
 				&nbsp;&nbsp;
 				<span class="stat">Office days (actual/min.) - <b id="office-actual-min"></b></span>
 				&nbsp;&nbsp;
-				<span class="stat">Holidays - <b id="holidays"></b></span>
+				<span class="stat">Holidays - <b id="holidays"></b><small id="holidays-remaining"
+						class="ms-2"></small></span>
 				&nbsp;&nbsp;
 				<span class="stat">Sick leave - <b id="sickleave"></b></span>
 				&nbsp;&nbsp;
 				<span class="stat">Overtime - <b id="overtime"></b></span>
 			</div>
 			<div class="col-2">
-				<span class="stat">Year Target - <b><span id="year-target"></span>%</b><small id="year-target-completion"></small></span>
+				<span class="stat">Year Target - <b><span id="year-target"></span>%</b><small
+						id="year-target-completion" class="ms-2"></small></span>
 			</div>
 		</div>
 		<div class="row mt-2">
@@ -405,7 +414,7 @@
 				</div>
 				<div class="modal-body">
 					<div class="mb-3">
-						<label for="working-days-edit" class="form-label">workingDays</label>
+						<label for="working-days-edit" class="form-label">Provide working days</label>
 						<input type="text" class="form-control" id="working-days-edit">
 					</div>
 				</div>
@@ -415,6 +424,36 @@
                         set_working_days(calendar.getDate().getFullYear(), 
                             calendar.getDate().getMonth() + 1, 
                             document.getElementById('working-days-edit').value
+                        );
+                        setTimeout(() => {
+                            update_stats(calendar.getDate().getFullYear(), calendar.getDate().getMonth() + 1);
+                        }, 500);
+                        return true;
+                    })();return true;">Save changes</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="yearHolidaysModal" tabindex="-1" aria-labelledby="yearHolidaysModalLabel"
+		aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="yearHolidaysModalLabel">Modify selected year holidays</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label for="year-holidays-edit" class="form-label">Provide max year holidays</label>
+						<input type="text" class="form-control" id="year-holidays-edit">
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="(function(){
+                        set_year_holidays(calendar.getDate().getFullYear(),
+                            document.getElementById('year-holidays-edit').value
                         );
                         setTimeout(() => {
                             update_stats(calendar.getDate().getFullYear(), calendar.getDate().getMonth() + 1);
@@ -436,7 +475,7 @@
 				</div>
 				<div class="modal-body">
 					<div class="mb-3">
-						<label for="year-target-edit" class="form-label">yearTarget</label>
+						<label for="year-target-edit" class="form-label">Provide year target</label>
 						<input type="text" class="form-control" id="year-target-edit">
 					</div>
 					<div class="row">
@@ -642,13 +681,20 @@
 				</div>
 				<div class="modal-body">
 
-					<p class="stat">Month Target - <b><span id="stats-month-target"></span>%</b></p>
+					<p class="stat">Month Target (actual) - <b><span id="stats-month-target"></span>%</b><small
+							id="stats-month-target-completion" class="ms-2"></small></p>
+
+					<p class="stat">Year Target (actual) - <b><span id="stats-year-target"></span>%</b><small
+							id="stats-year-target-completion" class="ms-2"></small></p>
 
 					<p class="stat">Working Days - <b id="stats-working-days"></b></p>
 
 					<p class="stat">Office days (actual/min.) - <b id="stats-office-actual-min"></b></p>
 
-					<p class="stat">Holidays - <b id="stats-holidays"></b></p>
+					<p class="stat">Holidays 
+						<br>&nbsp;used this month: <b id="stats-holidays"></b>
+						<br>&nbsp;(remaining this year / max available)<small
+							id="stats-holidays-remaining" class="ms-2"></small></p>
 
 					<p class="stat">Sick leave - <b id="stats-sickleave"></b></p>
 
