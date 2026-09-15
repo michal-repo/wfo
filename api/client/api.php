@@ -232,8 +232,8 @@ class API
                     $res[] = $this->generate_book_parking_spot_event($dt);
                     $pmsp = $this->generate_parking_spot_map_event($dt);
                     if ($pmsp) {
-                    $res[] = $pmsp;
-                }
+                        $res[] = $pmsp;
+                    }
                 }
             }
             $overtime_key = array_search($dt->format("Y-m-d"), $overtime_days);
@@ -491,11 +491,34 @@ class API
         return $stmt->fetchColumn();
     }
 
+    public function get_calculated_wfo_user_year_holidays($year)
+    {
+        $query = "SELECT COALESCE(SUM(user_year_holidays.holidays), 0) - "
+            . "COALESCE((SELECT COUNT(*) FROM wfo_holidays wh "
+            . "WHERE wh.user_id = :user_id AND YEAR(wh.defined_date) <= :cutoff_year), 0) "
+            . "AS remaining_holidays "
+            . "FROM wfo_user_year_holidays user_year_holidays "
+            . "WHERE user_year_holidays.user_id = :user_id "
+            . "AND user_year_holidays.`year` <= :year";
+
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':year', $year, \PDO::PARAM_INT);
+        $stmt->bindValue(':cutoff_year', $year - 1, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchColumn();
+    }
+
     public function get_remaining_wfo_user_year_holidays($year)
     {
-        $query = "SELECT (user_year_holidays.max_holidays - user_holidays.used_holidays) as remaining_holidays from "
-        ."(SELECT holidays as max_holidays FROM wfo_user_year_holidays WHERE `year` = :year AND user_id = :user_id ORDER BY id DESC LIMIT 1) as user_year_holidays, "
-        ."(select count(*) as used_holidays from wfo_holidays wh where wh.user_id = :user_id and YEAR(wh.defined_date) = :year  ) as user_holidays limit 1";
+        $query = "SELECT COALESCE(SUM(user_year_holidays.holidays), 0) - "
+            . "COALESCE((SELECT COUNT(*) FROM wfo_holidays wh "
+            . "WHERE wh.user_id = :user_id AND YEAR(wh.defined_date) <= :year), 0) "
+            . "AS remaining_holidays "
+            . "FROM wfo_user_year_holidays user_year_holidays "
+            . "WHERE user_year_holidays.user_id = :user_id "
+            . "AND user_year_holidays.`year` <= :year";
 
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);

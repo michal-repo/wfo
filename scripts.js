@@ -228,7 +228,7 @@ function update_stats(year, month) {
         working_days_edit.value = working_days.innerText;
         year_holidays_edit.value = response.data.data.user_holidays_year !== null ? response.data.data.user_holidays_year : "";
         holidays.innerText = response.data.data.holidays !== null ? response.data.data.holidays : "-";
-        holidays_remaining.innerText = `(${response.data.data.remaining_holidays_year !== null ? response.data.data.remaining_holidays_year : "-"} / ${response.data.data.user_holidays_year !== null ? response.data.data.user_holidays_year : "-"})`;
+        holidays_remaining.innerText = `(${response.data.data.remaining_holidays_year !== null ? response.data.data.remaining_holidays_year : "-"} / ${response.data.data.user_all_holidays_year !== null ? response.data.data.user_all_holidays_year : "-"})`;
         sickleave.innerText = response.data.data.sickleave !== null ? response.data.data.sickleave : "-";
         overtime.innerText = response.data.data.overtime !== null ? response.data.data.overtime + "h" : "-";
         if (response.data.data.working_days !== null

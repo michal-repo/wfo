@@ -204,6 +204,8 @@ $router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
         $result['holidays_year'] = $holidays_year ? $holidays_year : 0;
         $user_holidays_year = $api->get_wfo_user_year_holidays($year);
         $result['user_holidays_year'] = $user_holidays_year ? $user_holidays_year : 0;
+        $user_all_holidays_year = $api->get_calculated_wfo_user_year_holidays($year);
+        $result['user_all_holidays_year'] = $user_all_holidays_year ? $user_all_holidays_year : 0;
         $remaining_holidays_year = $api->get_remaining_wfo_user_year_holidays($year);
         $result['remaining_holidays_year'] = $remaining_holidays_year ? $remaining_holidays_year : 0;
         $sickleave = $api->get_wfo_sickleave_count($year, $month);
