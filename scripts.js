@@ -30,7 +30,7 @@ function set_month_target(year, month, target) {
 }
 
 function set_working_days(year, month, target) {
-    axios.post(`api/working-days/year/${year}/month/${month}/working-days/${target}`).then(response => {
+    axios.post(`api/working-days/year/${year}/month/${month}/working-days/${target}`, {}).then(response => {
         return true;
     }).catch(error => {
         return false;
@@ -38,7 +38,7 @@ function set_working_days(year, month, target) {
 }
 
 function set_year_holidays(year, holidays) {
-    axios.post(`api/year-holidays/year/${year}/holidays/${holidays}`).then(response => {
+    axios.post(`api/year-holidays/year/${year}/holidays/${holidays}`, {}).then(response => {
         return true;
     }).catch(error => {
         return false;
@@ -63,13 +63,14 @@ function set_year_target(year, target, start_month, start_year, end_month, end_y
 async function generate_commands() {
     let response;
     response = await axios.get(`api/generate-commands`).then(response => {
-        txt = "";
+        const container = document.getElementById("generatedCommandsBody");
+        container.innerHTML = '';
         response.data.data.forEach((el) => {
             if (el !== undefined) {
-                txt += el + "<br>";
+                container.appendChild(document.createTextNode(el));
+                container.appendChild(document.createElement("br"));
             }
         })
-        document.getElementById("generatedCommandsBody").innerHTML = txt;
         return null;
     }).catch(error => {
         return null;
@@ -78,11 +79,20 @@ async function generate_commands() {
 
 async function get_tokens() {
     let response;
-    document.getElementById("existing-tokens-list").innerHTML = ""; // Clear existing list
+    const list = document.getElementById("existing-tokens-list");
+    list.innerHTML = ""; // Clear existing list
     response = await axios.get(`api/get-tokens`).then(response => {
         response.data.data.forEach((el) => {
             if (el !== undefined) {
-                document.getElementById("existing-tokens-list").innerHTML += "<div> ID: " + el.id + ", Name: " + el.token_name + "&nbsp;<button class=\"btn btn-danger btn-sm\" onclick=\"deleteToken(" + el.id + ")\">Delete</button></div>"; // Append to existing list
+                const div = document.createElement("div");
+                div.appendChild(document.createTextNode(`ID: ${el.id}, Name: ${el.token_name}\u00A0`));
+                const btn = document.createElement("button");
+                btn.className = "btn btn-danger btn-sm";
+                btn.type = "button";
+                btn.textContent = "Delete";
+                btn.addEventListener("click", () => deleteToken(el.id));
+                div.appendChild(btn);
+                list.appendChild(div);
             }
         })
         return null;
@@ -398,31 +408,41 @@ async function populate_maps_list() {
         const mapsListEl = document.getElementById('maps-list');
         mapsListEl.innerHTML = '';
         maps.forEach(map => {
+            const mapId = Number(map.id);
             const li = document.createElement('li');
             li.className = 'list-group-item d-flex justify-content-between align-items-center';
             li.innerHTML = `
             <div class="container-fluid mb-2">
                 <div class="row">
                     <div class="col-3">
-                        <span>${map.name}</span>
+                        <span class="map-name"></span>
                     </div>
                     <div class="col-6">
-                        <input class="form-control form-control-sm" type="file" id="seats-file-${map.id}" accept=".json" />
+                        <input class="form-control form-control-sm" type="file" id="seats-file-${mapId}" accept=".json" />
                     </div>
                     <div class="col-3">
                         <div class="btn-toolbar justify-content-end" role="toolbar" aria-label="Toolbar operations">
                             <div class="btn-group me-2" role="group" aria-label="add-seats">
-                                <button class="btn btn-primary btn-sm" onclick="confirm('Are you sure you want to add seats from the selected file? Existing seats will be overwritten!') && bulk_create_seats(${map.id})">Add seats</button>
+                                <button type="button" class="btn btn-primary btn-sm add-seats-btn">Add seats</button>
                             </div>
                             <div class="btn-group" role="group" aria-label="operations">
-                                <button class="btn btn-primary btn-sm" onclick="show_map(${map.id})">Show</button>
-                                <button class="btn btn-danger btn-sm" onclick="delete_map(${map.id})">Delete</button>
+                                <button type="button" class="btn btn-primary btn-sm show-map-btn">Show</button>
+                                <button type="button" class="btn btn-danger btn-sm delete-map-btn">Delete</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             `;
+            // map.name is user-supplied, so it's set as text rather than interpolated as HTML
+            li.querySelector('.map-name').textContent = map.name;
+            li.querySelector('.add-seats-btn').addEventListener('click', () => {
+                if (confirm('Are you sure you want to add seats from the selected file? Existing seats will be overwritten!')) {
+                    bulk_create_seats(mapId);
+                }
+            });
+            li.querySelector('.show-map-btn').addEventListener('click', () => show_map(mapId));
+            li.querySelector('.delete-map-btn').addEventListener('click', () => delete_map(mapId));
             mapsListEl.appendChild(li);
         });
     } catch (error) {
