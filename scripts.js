@@ -759,3 +759,44 @@ async function populate_recent_parking_spot_choices() {
         console.error("Error populating recent parking spot choices:", error);
     }
 }
+
+function generateMobileMenu(authStatus = false) {
+    const floatingButtonsMenu = document.getElementById('floating-buttons-menu');
+    if (!authStatus) {
+        const loginBtn = document.createElement('button');
+        loginBtn.className = 'btn btn-primary p-3 shadow';
+        loginBtn.title = 'Log in/Register';
+        loginBtn.innerText = 'Log in/Register';
+        loginBtn.onclick = () => {
+            window.location.replace("/wfo");
+        };
+        floatingButtonsMenu.appendChild(loginBtn);
+    } else {
+        const menuBtn = document.createElement('button');
+        menuBtn.className = 'btn btn-primary p-3 shadow';
+        menuBtn.title = 'Menu';
+        menuBtn.innerText = 'Menu';
+        menuBtn.onclick = () => {
+            new bootstrap.Offcanvas(document.getElementById('sidebarMenu')).show();
+        };
+        floatingButtonsMenu.appendChild(menuBtn);
+
+        const officeBtn = document.createElement('button');
+        officeBtn.className = 'btn btn-success p-3 shadow';
+        officeBtn.title = 'Office map';
+        officeBtn.innerText = 'Office map';
+        officeBtn.onclick = () => {
+            show_map_today('office');
+        };
+        floatingButtonsMenu.appendChild(officeBtn);
+
+        const parkingBtn = document.createElement('button');
+        parkingBtn.className = 'btn btn-info p-3 shadow text-white';
+        parkingBtn.title = 'Parking map';
+        parkingBtn.innerText = 'Parking map';
+        parkingBtn.onclick = () => {
+            show_map_today('parking');
+        };
+        floatingButtonsMenu.appendChild(parkingBtn);
+    }
+}
