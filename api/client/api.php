@@ -19,7 +19,7 @@ class API
         $this->auth = new \Delight\Auth\Auth($this->db->dbh);
     }
 
-    public function log_in($email, $password)
+    public function log_in($email, #[\SensitiveParameter] $password)
     {
         try {
             $this->auth->login($email, $password, ((empty($_ENV["login_remember_duration"]) || intval($_ENV["login_remember_duration"]) === 0)  ? NULL : $_ENV["login_remember_duration"]));
@@ -57,13 +57,16 @@ class API
         return $this->auth->getUserId();
     }
 
-    public function register($email, $password, $username)
+    public function register($email, #[\SensitiveParameter] $password, $username)
     {
         try {
             if (\preg_match('/[\x00-\x1f\x7f\/:\\\\]/', $username) === 0 && $_ENV["register_enabled"] === "true") {
-                $userId = $this->auth->registerWithUniqueUsername($email, $password, $username);
+                if (\strlen($password) < 12) {
+                    throw new \Exception("Password must be at least 12 characters long!", 1);
+                }
+                $this->auth->registerWithUniqueUsername($email, $password, $username);
 
-                return 'We have signed up a new user with the ID ' . $userId;
+                return 'Registered! You can now log in.';
             } else {
                 throw new \Exception("Unable to register!", 1);
             }
@@ -1074,6 +1077,18 @@ class API
 
     public function save_map($map, $name, $imageBoundsX, $imageBoundsY, $type)
     {
+        // reject oversized uploads before decoding (base64 of a 10MB PNG)
+        if (!is_string($map) || strlen($map) > 14_000_000) {
+            throw new \Exception("Map image is too large!", 1);
+        }
+        $decoded = base64_decode($map, true);
+        if ($decoded === false || @getimagesizefromstring($decoded)[2] !== IMAGETYPE_PNG) {
+            throw new \Exception("Map image must be a valid PNG!", 1);
+        }
+        if (!is_numeric($imageBoundsX) || !is_numeric($imageBoundsY)) {
+            throw new \Exception("Invalid image bounds!", 1);
+        }
+
         $query = "INSERT INTO maps (map, user_id, name, type, imageBoundsY, imageBoundsX) VALUES (:map, :user_id, :name, :type, :imageBoundsY, :imageBoundsX)";
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':map', $map, \PDO::PARAM_LOB);
@@ -1175,6 +1190,20 @@ class API
             $user_map = $this->get_map($map_id);
             if (!$user_map) {
                 throw new \Exception("Map not found!", 1);
+            }
+            if (!is_array($json_data) || count($json_data) > 2000) {
+                throw new \Exception("Invalid or too large seats payload!", 1);
+            }
+            foreach ($json_data as $seat) {
+                if (
+                    !is_array($seat)
+                    || !isset($seat['name'], $seat['description'], $seat['bookable'], $seat['x_coordinate'], $seat['y_coordinate'])
+                    || !is_string($seat['name']) || strlen($seat['name']) > 255
+                    || !is_string($seat['description']) || strlen($seat['description']) > 1000
+                    || !is_numeric($seat['x_coordinate']) || !is_numeric($seat['y_coordinate'])
+                ) {
+                    throw new \Exception("Invalid seat entry in payload!", 1);
+                }
             }
 
             $q1 = "DELETE FROM seats WHERE map_id = :map_id";

@@ -12,10 +12,25 @@ use Dotenv\Dotenv as Dotenv;
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->safeLoad();
 
+// Must be set before the session (started by Delight\Auth\Auth) is opened
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax');
+if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+    ini_set('session.cookie_secure', '1');
+}
 
 $router = new BRouter();
 
 header('Content-Type: application/json');
+
+$router->before('POST', '/.*', function () {
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    if (stripos($contentType, 'application/json') !== 0) {
+        header('HTTP/1.1 415 Unsupported Media Type');
+        echo json_encode(['status' => ["code" => 415, 'message' => 'Content-Type must be application/json']]);
+        die();
+    }
+});
 
 $router->set404('/api(/.*)?', function () {
     header('HTTP/1.1 404 Not Found');
@@ -99,8 +114,27 @@ $router->post('/log-out', function () {
 $router->get('/feed', function () {
     try {
         log_in_check(true);
-        $start = date('Y-m-d', strtotime(checkGetParam('start', NULL)));
-        $end = date('Y-m-d', strtotime(checkGetParam('end', NULL)));
+        $startRaw = checkGetParam('start', NULL);
+        $endRaw = checkGetParam('end', NULL);
+        $startTs = $startRaw !== NULL ? strtotime($startRaw) : false;
+        $endTs = $endRaw !== NULL ? strtotime($endRaw) : false;
+
+        if ($startTs === false || $endTs === false) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => 'Invalid start/end date']]);
+            die();
+        }
+
+        $start = date('Y-m-d', $startTs);
+        $end = date('Y-m-d', $endTs);
+
+        // cap the range so a crafted request can't force unbounded day-by-day processing
+        $maxRangeDays = 62;
+        if ($endTs < $startTs || (($endTs - $startTs) / 86400) > $maxRangeDays) {
+            header('HTTP/1.1 400 Bad Request');
+            echo json_encode(['status' => ["code" => 400, 'message' => "Date range must not exceed {$maxRangeDays} days"]]);
+            die();
+        }
 
         $api = new API();
         $days = $api->get_wfo_days_feed($start, $end);
@@ -116,6 +150,7 @@ $router->get('/feed', function () {
 
 $router->get('/year/(\d+)', function ($year) {
     try {
+        log_in_check(true);
         $api = new API();
         $days = $api->get_wfo_days($year);
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $days]);
@@ -126,6 +161,7 @@ $router->get('/year/(\d+)', function ($year) {
 
 $router->get('/year/(\d+)/month/(\d+)', function ($year, $month) {
     try {
+        log_in_check(true);
         $api = new API();
         $days = $api->get_wfo_days($year, $month);
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $days]);
@@ -136,6 +172,7 @@ $router->get('/year/(\d+)/month/(\d+)', function ($year, $month) {
 
 $router->post('/year/(\d+)/month/(\d+)/day/(\d+)', function ($year, $month, $day) {
     try {
+        log_in_check(true);
         $api = new API();
         $result = $api->add_wfo_day($year, $month, $day);
         if ($result) {
@@ -156,6 +193,7 @@ $router->post('/switch', function () {
         die();
     }
     try {
+        log_in_check(true);
         $day = date('Y-m-d', strtotime($j['day']));
         $api = new API();
         $result = $api->switch_wfo_day($day);
@@ -171,6 +209,7 @@ $router->post('/switch', function () {
 
 $router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
     try {
+        log_in_check(true);
         $api = new API();
         $result = [];
         $year_target_row = $api->get_wfo_year_target($year);
@@ -250,6 +289,7 @@ $router->get('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
 
 $router->post('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
     try {
+        log_in_check(true);
         $j = json_decode(file_get_contents("php://input"), true);
         $target = isset($j['target']) ? floatval($j['target']) : 0;
         $api = new API();
@@ -266,6 +306,7 @@ $router->post('/target/year/(\d+)/month/(\d+)', function ($year, $month) {
 
 $router->post('/target/year/(\d+)', function ($year) {
     try {
+        log_in_check(true);
         $j = json_decode(file_get_contents("php://input"), true);
         $target = isset($j['target']) ? intval($j['target']) : 0;
         $start_month = isset($j['start_month']) ? intval($j['start_month']) : 1;
@@ -292,6 +333,7 @@ $router->post('/holiday/add', function () {
         die();
     }
     try {
+        log_in_check(true);
         $day = date('Y-m-d', strtotime($j['day']));
         $api = new API();
         $result = $api->add_wfo_holiday($day);
@@ -313,6 +355,7 @@ $router->post('/sickleave/add', function () {
         die();
     }
     try {
+        log_in_check(true);
         $day = date('Y-m-d', strtotime($j['day']));
         $api = new API();
         $result = $api->add_wfo_sickleave($day);
@@ -334,6 +377,7 @@ $router->post('/bank-holiday/add', function () {
         die();
     }
     try {
+        log_in_check(true);
         $day = date('Y-m-d', strtotime($j['day']));
         $api = new API();
         $result = $api->add_wfo_bank_holidays($day);
@@ -349,6 +393,7 @@ $router->post('/bank-holiday/add', function () {
 
 $router->post('/working-days/year/(\d+)/month/(\d+)/working-days/(\d+)', function ($year, $month, $working_days) {
     try {
+        log_in_check(true);
         $api = new API();
         $result = $api->add_wfo_working_days($year, $month, $working_days);
         if ($result) {
@@ -363,6 +408,7 @@ $router->post('/working-days/year/(\d+)/month/(\d+)/working-days/(\d+)', functio
 
 $router->post('/year-holidays/year/(\d+)/holidays/(\d+)', function ($year, $holidays) {
     try {
+        log_in_check(true);
         $api = new API();
         $result = $api->add_wfo_user_year_holidays($year, $holidays);
         if ($result) {
@@ -383,6 +429,7 @@ $router->post('/overtime/add', function () {
         die();
     }
     try {
+        log_in_check(true);
         $date = date('Y-m-d', strtotime($j['date']));
         $hours = $j['hours'];
         $api = new API();
@@ -405,6 +452,7 @@ $router->post('/overtime/delete', function () {
         die();
     }
     try {
+        log_in_check(true);
         $date = date('Y-m-d', strtotime($j['date']));
         $api = new API();
         $result = $api->delete_wfo_overtime($date);
@@ -420,6 +468,7 @@ $router->post('/overtime/delete', function () {
 
 $router->get('/overtime/year/(\d+)', function ($year) {
     try {
+        log_in_check(true);
         $api = new API();
         $days = $api->get_wfo_overtime($year);
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $days]);
@@ -430,6 +479,7 @@ $router->get('/overtime/year/(\d+)', function ($year) {
 
 $router->get('/overtime/year/(\d+)/month/(\d+)', function ($year, $month) {
     try {
+        log_in_check(true);
         $api = new API();
         $days = $api->get_wfo_overtime($year, $month);
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $days]);
@@ -440,6 +490,7 @@ $router->get('/overtime/year/(\d+)/month/(\d+)', function ($year, $month) {
 
 $router->get('/generate-commands', function () {
     try {
+        log_in_check(true);
         $api = new API();
         $commands = $api->generate_wfo_custom_command();
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $commands]);
@@ -451,6 +502,7 @@ $router->get('/generate-commands', function () {
 
 $router->get('/get-tokens', function () {
     try {
+        log_in_check(true);
         $api = new API();
         $commands = $api->get_access_tokens();
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $commands]);
@@ -462,6 +514,7 @@ $router->get('/get-tokens', function () {
 
 $router->post('/generate-token', function () {
     try {
+        log_in_check(true);
         $j = json_decode(file_get_contents("php://input"), true);
         if (is_null($j) || $j === false || !isset($j['token_name'])) {
             header('HTTP/1.1 400 Bad Request');
@@ -483,6 +536,7 @@ $router->post('/generate-token', function () {
 
 $router->post('/revoke-token', function () {
     try {
+        log_in_check(true);
         $j = json_decode(file_get_contents("php://input"), true);
         if (is_null($j) || $j === false || !isset($j['token_id'])) {
             header('HTTP/1.1 400 Bad Request');
@@ -517,6 +571,7 @@ $router->post('/get-info', function () {
 
 $router->get('/get-settings', function () {
     try {
+        log_in_check(true);
         $api = new API();
         $settings = $api->get_settings();
         echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => $settings]);
@@ -527,6 +582,7 @@ $router->get('/get-settings', function () {
 
 $router->post('/save-settings', function () {
     try {
+        log_in_check(true);
         $j = json_decode(file_get_contents("php://input"), true);
         if (is_null($j) || $j === false) {
             header('HTTP/1.1 400 Bad Request');
@@ -757,14 +813,22 @@ function checkGetParam($param, $default)
     return $default;
 }
 
-function handleErr($message)
+function handleErr($th)
 {
     header('HTTP/1.1 500 Internal Server Error');
+    // Sanitized: never log arguments (e.g. passwords) that were passed into the failing call
+    $safeLine = sprintf(
+        '%s: %s in %s:%d',
+        get_class($th),
+        $th->getMessage(),
+        $th->getFile(),
+        $th->getLine()
+    );
     if ($_ENV['debug'] === "true") {
-        var_dump($message);
+        echo $safeLine . PHP_EOL;
         die();
     } else {
-        file_put_contents('logs.txt', "### " . date('Y-m-d H:i:s') . PHP_EOL . $message . PHP_EOL, FILE_APPEND | LOCK_EX);
+        file_put_contents(__DIR__ . '/logs.txt', "### " . date('Y-m-d H:i:s') . PHP_EOL . $safeLine . PHP_EOL, FILE_APPEND | LOCK_EX);
         echo json_encode(['status' => ['code' => 500, 'message' => 'Ops! Error! Contact Administrator.']]);
         die();
     }

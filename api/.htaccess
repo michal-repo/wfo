@@ -2,47 +2,46 @@
     RewriteEngine On
     RewriteBase /wfo/api/
     RewriteRule ^index\.php$ - [L]
+    RewriteRule ^\.git(/|$) - [F,L]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule . /wfo/api/index.php [L]
 </IfModule>
 
-<Files "log.txt">
+# Matches both log.txt and logs.txt (the name actually written by the app)
+<FilesMatch "^logs?\.txt$">
+    Require all denied
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "^\.env(\.example)?$">
+    Require all denied
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "^composer\.(phar|lock|json)$">
+    Require all denied
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "^migrations(-db)?\.php$">
+    Require all denied
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# db.php and client/api.php are only meant to be `require`d by index.php
+<Files "db.php">
+    Require all denied
     Order Allow,Deny
     Deny from all
 </Files>
 
-<Files ".env">
-    Order Allow,Deny
-    Deny from all
-</Files>
-
-<Files ".env.example">
-    Order Allow,Deny
-    Deny from all
-</Files>
-
-<Files "composer.phar">
-    Order Allow,Deny
-    Deny from all
-</Files>
-
-<Files "composer.lock">
-    Order Allow,Deny
-    Deny from all
-</Files>
-
-<Files "composer.json">
-    Order Allow,Deny
-    Deny from all
-</Files>
-
-<Files "migrations-db.php">
-    Order Allow,Deny
-    Deny from all
-</Files>
-
-<Files "migrations.php">
-    Order Allow,Deny
-    Deny from all
-</Files>
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "same-origin"
+    Header always set X-Frame-Options "SAMEORIGIN"
+</IfModule>
