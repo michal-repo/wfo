@@ -35,6 +35,10 @@
   z-index: 1059 !important;
 }
 
+.modal {
+  z-index: 1061 !important;
+}
+
 .fc-event {
   cursor: pointer;
 }
