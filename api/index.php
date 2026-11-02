@@ -347,6 +347,28 @@ $router->post('/holiday/add', function () {
     }
 });
 
+$router->post('/day-color/switch', function () {
+    $j = json_decode(file_get_contents("php://input"), true);
+    if (is_null($j) || $j === false) {
+        header('HTTP/1.1 400 Bad Request');
+        echo json_encode(['status' => ["code" => 400, 'message' => 'Accepts only JSON']]);
+        die();
+    }
+    try {
+        log_in_check(true);
+        $day = date('Y-m-d', strtotime($j['day']));
+        $api = new API();
+        $result = $api->switch_wfo_day_color($day);
+        if ($result) {
+            echo json_encode(['status' => ['code' => 200, 'message' => 'ok'], "data" => 'switched']);
+        } else {
+            throw new \Exception("Unable to change color!", 1);
+        }
+    } catch (\Throwable $th) {
+        handleErr($th);
+    }
+});
+
 $router->post('/sickleave/add', function () {
     $j = json_decode(file_get_contents("php://input"), true);
     if (is_null($j) || $j === false) {

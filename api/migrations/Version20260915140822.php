@@ -19,7 +19,7 @@ final class Version20260915140822 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql("CREATE TABLE wfo_cal.wfo_user_year_holidays (
+        $this->addSql("CREATE TABLE wfo_user_year_holidays (
             `id` INT(11) NOT NULL AUTO_INCREMENT,
             `user_id` INT(11) NOT NULL,
             `year` INT(4) NOT NULL,
@@ -30,6 +30,6 @@ final class Version20260915140822 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        $this->addSql("DROP TABLE wfo_cal.wfo_user_year_holidays");
+        $this->addSql("DROP TABLE wfo_user_year_holidays");
     }
 }
