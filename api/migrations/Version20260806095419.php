@@ -19,11 +19,11 @@ final class Version20260806095419 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql("ALTER TABLE wfo_cal.wfo_month_target MODIFY COLUMN `target` float NOT NULL");
+        $this->addSql("ALTER TABLE wfo_month_target MODIFY COLUMN `target` float NOT NULL");
     }
 
     public function down(Schema $schema): void
     {
-        $this->addSql("ALTER TABLE wfo_cal.wfo_month_target MODIFY COLUMN `target` int(11) NOT NULL");
+        $this->addSql("ALTER TABLE wfo_month_target MODIFY COLUMN `target` int(11) NOT NULL");
     }
 }
