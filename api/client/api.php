@@ -125,13 +125,15 @@ class API
 
     public function get_wfo_days_feed($start, $end)
     {
-        $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") FROM wfo_days WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
+        $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") as defined_date, custom_color FROM wfo_days WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
         $stmt = $this->db->dbh->prepare($query);
         $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
         $stmt->bindValue(':start', $start, \PDO::PARAM_STR);
         $stmt->bindValue(':end', $end, \PDO::PARAM_STR);
         $stmt->execute();
-        $days_found = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        $days_found_rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $days_found = array_column($days_found_rows, 'defined_date');
+        $days_custom_colors = array_column($days_found_rows, 'custom_color', 'defined_date');
 
         $query = 'SELECT DATE_FORMAT(defined_date , "%Y-%m-%d") FROM wfo_holidays WHERE user_id = :user_id AND defined_date >= :start AND defined_date <= :end';
         $stmt = $this->db->dbh->prepare($query);
@@ -203,10 +205,14 @@ class API
                     "title" => $_ENV['office_day_label'],
                     "start" => $dt->format("Y-m-d"),
                     "end" => $dt->format("Y-m-d"),
-                    "color" => $_ENV['office_day_color'],
+                    "color" => $days_custom_colors[$dt->format("Y-m-d")] ?? $_ENV['office_day_color'],
                     "cursor" => "pointer",
                     "id" => 1
                 ];
+                $color_event = $this->generate_change_color_event($dt);
+                if ($color_event) {
+                    $res[] = $color_event;
+                }
                 $res[] = $this->generate_holiday_event($dt);
                 $res[] = $this->generate_bank_holiday_event($dt);
                 $res[] = $this->generate_sickleave_event($dt);
@@ -264,6 +270,62 @@ class API
             "cursor" => "pointer",
             "id" => 9
         ];
+    }
+
+    private function get_office_day_custom_colors(): array
+    {
+        $colors = array_map('trim', explode(',', $_ENV['office_day_custom_colors'] ?? ''));
+        return array_values(array_filter($colors, fn($c) => $c !== '' && strlen($c) <= 12));
+    }
+
+    private function generate_change_color_event($dt): array | null
+    {
+        if (count($this->get_office_day_custom_colors()) === 0) {
+            return NULL;
+        }
+        return [
+            "title" => "🎨 Change color",
+            "start" => $dt->format("Y-m-d"),
+            "end" => $dt->format("Y-m-d"),
+            "color" => $_ENV['add_holiday_color'],
+            "textColor" => $_ENV['add_holiday_text_color'],
+            "cursor" => "pointer",
+            "id" => 16
+        ];
+    }
+
+    public function switch_wfo_day_color($day)
+    {
+        $colors = $this->get_office_day_custom_colors();
+        if (count($colors) === 0) {
+            return false;
+        }
+
+        $query = 'SELECT custom_color FROM wfo_days WHERE user_id = :user_id AND defined_date = :day';
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
+        $stmt->execute();
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if ($row === false) {
+            return false;
+        }
+
+        // no color (or one no longer in the list) -> first color; after the last one -> back to default (NULL)
+        $current = array_search($row['custom_color'], $colors, true);
+        if ($row['custom_color'] === NULL || $current === false) {
+            $next = $colors[0];
+        } else {
+            $next = $colors[$current + 1] ?? NULL;
+        }
+
+        $query = 'UPDATE wfo_days SET custom_color = :color WHERE user_id = :user_id AND defined_date = :day';
+        $stmt = $this->db->dbh->prepare($query);
+        $stmt->bindValue(':color', $next, is_null($next) ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        $stmt->bindValue(':user_id', $this->get_user_id(), \PDO::PARAM_INT);
+        $stmt->bindValue(':day', $day, \PDO::PARAM_STR);
+
+        return $stmt->execute();
     }
 
     private function generate_overtime_event($dt)

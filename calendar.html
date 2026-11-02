@@ -133,6 +133,14 @@
 				}).catch(error => {
 					logError('There was an error switching the day:', error);
 				});
+			} else if (event_text.includes("Change color")) {
+				axios.post(`api/day-color/switch`, {
+					day: day
+				}).then(response => {
+					calendar.refetchEvents();
+				}).catch(error => {
+					logError('There was an error changing the color:', error);
+				});
 			} else if (event_text.includes("Add holiday")) {
 				axios.post(`api/holiday/add`, {
 					day: day
